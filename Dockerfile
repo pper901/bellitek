@@ -15,11 +15,17 @@ WORKDIR /var/www/html
 # Copy project files
 COPY . .
 
+# Copy .env.example to .env
+RUN cp .env.example .env
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
+
+# Generate app key
+RUN php artisan key:generate --ansi
 
 # Build assets (Vite + Tailwind)
 RUN npm install
