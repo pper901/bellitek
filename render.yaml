@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: bellitek
+    env: php
+    buildCommand: |
+      composer install
+      php artisan key:generate
+      php artisan migrate --force
+    startCommand: |
+      php artisan serve --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        value: https://bellitek.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: dpg-d49kmibipnbc73e36bi0-a
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        value: bellitek_database
+      - key: DB_USERNAME
+        value: bellitek_database_user
+      - key: DB_PASSWORD
+        value: xPyEuzPORPzfO3OueqSwkbqS8x8R5ymI
