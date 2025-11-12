@@ -49,7 +49,7 @@ RUN php artisan migrate --force
 EXPOSE 10000
 
 # Start Apache in foreground
-CMD ["apache2-foreground"]
+# CMD ["apache2-foreground"]
 
 # Start Laravel server
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
