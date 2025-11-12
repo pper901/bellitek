@@ -22,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         if (env('ENFORCE_SSL', false)) {
             $url->forceScheme('https');
+            URL::forceScheme('https');
         }
     }
 

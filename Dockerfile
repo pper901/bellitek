@@ -43,6 +43,10 @@ RUN composer install --no-dev --optimize-autoloader
 # Generate app key
 # RUN php artisan key:generate --ansi
 
+# Set build environment
+ENV VITE_APP_URL=https://bellitek-1.onrender.com
+
+
 # Build assets (Vite + Tailwind)
 RUN npm install
 RUN npm run build
