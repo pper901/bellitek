@@ -48,7 +48,7 @@ RUN npm install
 RUN npm run build
 
 # Generate app key and cache configs
-RUN php artisan key:generate
+# RUN php artisan key:generate
 RUN php artisan config:cache
 RUN php artisan route:cache
 RUN php artisan migrate --force
