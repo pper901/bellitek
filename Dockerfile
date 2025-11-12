@@ -3,8 +3,8 @@ FROM php:8.3-apache
 
 # Install system dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
-    git unzip libpng-dev libonig-dev libxml2-dev zip curl npm nodejs && \
-    docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    git unzip libpng-dev libonig-dev libxml2-dev zip curl npm nodejs libpq-dev && \
+    docker-php-ext-install pdo_pgsql pdo_mysql mbstring exif pcntl bcmath gd
 
 # Enable Apache rewrite module
 RUN a2enmod rewrite
@@ -18,6 +18,9 @@ COPY . .
 # Configure Apache to use Laravel public folder
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
 
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Copy .env.example to .env
 RUN cp .env.example .env
@@ -28,25 +31,20 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-
-# Generate app key
+# Generate app key and cache configs
 RUN php artisan key:generate --ansi
+RUN php artisan config:cache
+RUN php artisan route:cache
 
 # Build assets (Vite + Tailwind)
 RUN npm install
 RUN npm run build
 
-# Generate app key and cache configs
-RUN php artisan key:generate
-RUN php artisan config:cache
-RUN php artisan route:cache
+# Run migrations
 RUN php artisan migrate --force
 
-# Expose port 10000
-EXPOSE 10000
+# Expose default Apache port
+EXPOSE 80
 
 # Start Apache in foreground
 CMD ["apache2-foreground"]
-
-# Start Laravel server
-# CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
