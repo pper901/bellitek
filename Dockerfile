@@ -25,6 +25,14 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /et
 # Copy .env.example to .env
 RUN cp .env.example .env
 
+# Install system dependencies and PHP extensions
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    zip \
+    unzip \
+    git \
+    && docker-php-ext-install pdo pdo_pgsql
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
