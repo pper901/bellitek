@@ -35,6 +35,7 @@ RUN npm run build
 RUN php artisan key:generate
 RUN php artisan config:cache
 RUN php artisan route:cache
+RUN php artisan migrate --force
 
 # Expose port 10000
 EXPOSE 10000
