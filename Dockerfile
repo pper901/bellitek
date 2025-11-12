@@ -46,10 +46,10 @@ RUN php artisan route:cache
 RUN php artisan migrate --force
 
 # Expose port 10000
-EXPOSE 80
+EXPOSE 10000
 
 # Start Apache in foreground
 CMD ["apache2-foreground"]
 
 # Start Laravel server
-# CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
