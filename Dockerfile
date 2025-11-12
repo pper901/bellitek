@@ -15,6 +15,10 @@ WORKDIR /var/www/html
 # Copy project files
 COPY . .
 
+# Configure Apache to use Laravel public folder
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
+
+
 # Copy .env.example to .env
 RUN cp .env.example .env
 
@@ -40,6 +44,9 @@ RUN php artisan migrate --force
 
 # Expose port 10000
 EXPOSE 10000
+
+# Start Apache in foreground
+CMD ["apache2-foreground"]
 
 # Start Laravel server
 # CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
