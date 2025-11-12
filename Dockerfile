@@ -46,7 +46,7 @@ RUN php artisan route:cache
 RUN php artisan migrate --force
 
 # Expose port 10000
-EXPOSE 10000
+EXPOSE 80
 
 # Start Apache in foreground
 CMD ["apache2-foreground"]
