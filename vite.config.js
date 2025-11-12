@@ -7,11 +7,6 @@ export default defineConfig({
         https: true,
         host: '0.0.0.0',
     },
-    build: {
-        manifest: true,
-        outDir: 'public/build', 
-        emptyOutDir: true
-    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
