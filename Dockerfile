@@ -24,6 +24,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Clear and rebuild caches
+RUN php artisan config:clear
+RUN php artisan cache:clear
+RUN php artisan view:clear
+RUN php artisan config:cache
+RUN php artisan route:cache
+
 # Generate app key
 RUN php artisan key:generate --ansi
 
