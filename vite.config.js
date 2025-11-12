@@ -15,5 +15,5 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
-    base: '/build/',
+    base: process.env.VITE_APP_URL + '/build/',
 });
