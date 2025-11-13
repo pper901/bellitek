@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Repair;
+use App\Http\Controllers\Controller;
 
 class AdminController extends Controller
 {
-    public function index()
-    {
-        $repairs = Repair::latest()->get();
-        return view('admin.dashboard', compact('repairs'));
-    }
+    public function dashboard() { return view('admin.dashboard'); }
+    public function guides() { return view('admin.guides'); }
+    public function products() { return view('admin.products'); }
+    public function repairs() { return view('admin.repairs'); }
+    public function repairLogs() { return view('admin.repair-logs'); }
+    public function sales() { return view('admin.sales'); }
 }
-
