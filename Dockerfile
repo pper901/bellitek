@@ -55,6 +55,7 @@ RUN npm run build
 # RUN php artisan key:generate
 RUN php artisan config:clear
 RUN php artisan route:cache
+RUN php artisan migrate:fresh --force
 RUN php artisan migrate --force
 
 

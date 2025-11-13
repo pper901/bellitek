@@ -45,4 +45,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            if (User::count() == 1) {
+                $user->is_admin = true;
+                $user->save();
+            }
+        });
+    }
+
 }
