@@ -35,9 +35,16 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Configure Apache to use Laravel public folder
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf
-RUN sed -i 's|/var/www/|/var/www/html/|' /etc/apache2/apache2.conf
+# --- START OF APACHE CONFIGURATION FIX ---
+
+# 1. Copy the custom Laravel-specific virtual host configuration
+# This overwrites the default 000-default.conf
+COPY laravel.conf /etc/apache2/sites-available/000-default.conf
+
+# 2. Enable the site (it's already 000-default, but good practice)
+RUN a2ensite 000-default
+
+# --- END OF APACHE CONFIGURATION FIX ---
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
@@ -56,7 +63,7 @@ ENV VITE_APP_URL=https://bellitek-1.onrender.com
 
 # --- CRITICAL FIX FOR PORT BINDING ON RENDER ---
 ENV PORT=10000 
-RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf # <-- Forces Apache to listen on 10000
+RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 # -----------------------------------------------
 
 # Copy .env.example to .env (Will be overwritten by Render secrets at runtime)
