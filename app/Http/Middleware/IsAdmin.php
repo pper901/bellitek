@@ -11,7 +11,7 @@ class IsAdmin
     public function handle(Request $request, Closure $next): Response
     {
         if (!auth()->check() || !auth()->user()->is_admin) {
-            return redirect('/dashboard')->with('error', 'Unauthorized access.');
+            return redirect('dashboard');
         }
         return $next($request);
     }
