@@ -21,6 +21,9 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo pdo_pgsql
 # Enable Apache rewrite module
 RUN a2enmod rewrite
 
+# Add ServerName to suppress AH00558 warning (optional, but cleaner logs)
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
 # --- 2. APPLICATION SETUP ---
 # Set working directory
 WORKDIR /var/www/html
@@ -41,7 +44,6 @@ RUN sed -i 's|/var/www/|/var/www/html/|' /etc/apache2/apache2.conf
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Install PHP dependencies
-# Use --no-dev and --optimize-autoloader for production
 RUN composer install --no-dev --optimize-autoloader
 
 # Build assets (Vite + Tailwind)
@@ -49,15 +51,18 @@ RUN npm install
 RUN npm run build
 
 # --- 4. OPTIMIZED RUNTIME ENVIRONMENT ---
-# Define build environment variables (These are used during the build, but overwritten at runtime)
+# Define build environment variables
 ENV VITE_APP_URL=https://bellitek-1.onrender.com
-# Use the correct internal port for Apache in the official image
-ENV APACHE_LISTEN_PORT=10000
+
+# --- CRITICAL FIX FOR PORT BINDING ON RENDER ---
+ENV PORT=10000 
+RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf # <-- Forces Apache to listen on 10000
+# -----------------------------------------------
 
 # Copy .env.example to .env (Will be overwritten by Render secrets at runtime)
 RUN cp .env.example .env
 
-# Expose the internal port (Render maps the external port to this internal one)
+# Expose the internal port
 EXPOSE 10000
 
 # --- 5. PRODUCTION COMMANDS (Use the Apache server) ---
@@ -66,5 +71,5 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Start Apache in foreground (CMD is executed by the ENTRYPOINT script)
+# Start Apache in foreground
 CMD ["apache2-foreground"]
