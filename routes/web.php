@@ -37,4 +37,9 @@ Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 
 Route::get('/track', [RepairController::class, 'trackForm'])->name('track.form');
 Route::post('/track', [RepairController::class, 'trackSubmit'])->name('track.submit');
+Route::get('/test-cookie', function () {
+    cookie()->queue('hello', 'world', 60);
+    return 'cookie set';
+});
+
 
