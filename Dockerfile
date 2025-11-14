@@ -35,16 +35,22 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX ---
+# --- START OF RELIABLE APACHE CONFIGURATION FIX ---
 
-# 1. Copy the custom Laravel-specific virtual host configuration
-# This overwrites the default 000-default.conf
-COPY laravel.conf /etc/apache2/sites-available/000-default.conf
+# 1. Update DocumentRoot in the main virtual host config to point to the public directory
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# 2. Enable the site (it's already 000-default, but good practice)
-RUN a2ensite 000-default
+# 2. Add the DirectoryIndex directive inside the main configuration file
+# This tells Apache to look for index.php as the default file
+RUN sed -i '/<Directory \/var\/www\/>/a\ \ \ \ DirectoryIndex index.php' /etc/apache2/apache2.conf
 
-# --- END OF APACHE CONFIGURATION FIX ---
+# 3. Ensure the Rewrite Engine is always active and AllowOverride is set to All
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+# 4. Remove the default index.html provided by the PHP image to prevent conflicts
+RUN rm -f /var/www/html/index.html
+
+# --- END OF RELIABLE APACHE CONFIGURATION FIX ---
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
