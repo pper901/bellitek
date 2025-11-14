@@ -40,14 +40,18 @@ RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # 1. Update DocumentRoot in the main virtual host config to point to the public directory
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# 2. Add the DirectoryIndex directive inside the main configuration file
-# This tells Apache to look for index.php as the default file
+# 2. Add DirectoryIndex to the main Apache config to explicitly define index.php
 RUN sed -i '/<Directory \/var\/www\/>/a\ \ \ \ DirectoryIndex index.php' /etc/apache2/apache2.conf
 
-# 3. Ensure the Rewrite Engine is always active and AllowOverride is set to All
+# 3. Ensure the Rewrite Engine is always active and AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-# 4. Remove the default index.html provided by the PHP image to prevent conflicts
+# --- FINAL FIX FOR THE "CANNOT SERVE DIRECTORY" ERROR (AH01276) ---
+# 4. Explicitly remove the ability for Apache to generate a directory index (prevents AH01276)
+RUN sed -i 's/Options Indexes FollowSymLinks/Options FollowSymLinks/g' /etc/apache2/apache2.conf
+# -------------------------------------------------------------------
+
+# 5. Remove the default index.html provided by the PHP image to prevent conflicts
 RUN rm -f /var/www/html/index.html
 
 # --- END OF RELIABLE APACHE CONFIGURATION FIX ---
