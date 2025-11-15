@@ -77,11 +77,6 @@ RUN echo '<VirtualHost *:80>\n' \
 # 7. Enable the minimal VHost.
 RUN a2ensite laravel-final.conf
 
-# --- CRITICAL FIX for ERR_TOO_MANY_REDIRECTS ---
-# 8. Tell Laravel to trust all proxies (Render, Load Balancers, etc.)
-# FIX: Removed the unnecessary extra '/app' from the path.
-RUN sed -i "s|protected \$proxies = null;|protected \$proxies = '\*';|g" /var/www/app/Http/Middleware/TrustProxies.php
-
 # --- END OF FINAL APACHE CONFIGURATION FIX ---
 
 # --- 5. OPTIMIZED RUNTIME ENVIRONMENT ---
