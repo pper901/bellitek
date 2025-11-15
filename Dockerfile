@@ -35,24 +35,17 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF FINAL APACHE CONFIGURATION FIX (Symlink + Options Strategy) ---
+# --- START OF APACHE CONFIGURATION FIX (Symlink + Runtime Fix) ---
 
 # 1. Remove the default index.html
 RUN rm -f /var/www/html/index.html
 
 # 2. CRITICAL FIX: Create a symlink for index.php. 
+# The permission fix is now handled by the entrypoint.sh script below.
 RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
 
-# 3. GUARANTEE OPTIONS ARE SET CORRECTLY FOR THE BASE DIRECTORY (Fixes AH00037)
-# This command forces the Options to include FollowSymLinks.
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options.*/Options FollowSymLinks/g' /etc/apache2/apache2.conf
-
-# 4. GUARANTEE AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
-
-# 5. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
+# 3. Explicitly set DocumentRoot in the default conf as a fallback.
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-
 
 # --- END OF APACHE CONFIGURATION FIX ---
 
