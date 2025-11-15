@@ -35,20 +35,26 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX (Using dedicated VHost file) ---
+# --- START OF RELIABLE APACHE CONFIGURATION FIX (SED Strategy) ---
 
-# 1. Copy the custom Laravel-specific virtual host configuration
-# NOTE: Ensure you have created the 'laravel.conf' file in your project root!
-COPY laravel.conf /etc/apache2/sites-available/laravel.conf
+# 1. Update DocumentRoot in the default virtual host config (000-default.conf)
+# This points the primary site to the /public directory.
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# 2. Disable the default site and enable the new Laravel site (CRITICAL FIX)
-RUN a2dissite 000-default.conf
-RUN a2ensite laravel.conf
+# 2. Add DirectoryIndex to the main Apache config (apache2.conf)
+# This ensures index.php is checked first for any directory request.
+RUN sed -i '/<Directory \/var\/www\/>/a\ \ \ \ DirectoryIndex index.php' /etc/apache2/apache2.conf
 
-# 3. Remove default index.html
+# 3. Ensure the Rewrite Engine is always active and AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+# 4. Explicitly remove the "Indexes" option from the main /var/www/ Directory block (This prevents AH01276)
+RUN sed -i 's/Options Indexes FollowSymLinks/Options FollowSymLinks/g' /etc/apache2/apache2.conf
+
+# 5. Remove the default index.html provided by the PHP image to prevent conflicts
 RUN rm -f /var/www/html/index.html
 
-# --- END OF APACHE CONFIGURATION FIX ---
+# --- END OF RELIABLE APACHE CONFIGURATION FIX ---
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
