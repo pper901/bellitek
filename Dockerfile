@@ -24,40 +24,16 @@ RUN a2enmod rewrite
 # Add ServerName to suppress AH00558 warning (optional, but cleaner logs)
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# --- 2. APPLICATION SETUP ---
-# Set working directory
-WORKDIR /var/www/html
+# --- 2. APPLICATION SETUP (THE FINAL DIRECTORY SWAP) ---
+# Set temporary working directory for file copy
+WORKDIR /usr/src/app
 
-# Copy project files
+# Copy project files into a source folder
 COPY . .
 
 # Set permissions for storage (CRITICAL for Laravel)
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# --- START OF FINAL, GUARANTEED APACHE CONFIGURATION FIX ---
-
-# 1. Create a clean, custom virtual host file directly in the image (no COPY command needed).
-# We explicitly set the DocumentRoot and allow all overrides in the public folder.
-RUN echo '<VirtualHost *:80>\n' \
-    '    DocumentRoot /var/www/html/public\n' \
-    '    <Directory /var/www/html/public>\n' \
-    '        Options Indexes FollowSymLinks\n' \
-    '        AllowOverride All\n' \
-    '        Require all granted\n' \
-    '    </Directory>\n' \
-    '</VirtualHost>' > /etc/apache2/sites-available/laravel.conf
-
-# 2. Disable the problematic default site configuration.
-RUN a2dissite 000-default.conf
-
-# 3. Enable our clean, new configuration.
-RUN a2ensite laravel.conf
-
-# 4. Remove default index.html
-RUN rm -f /var/www/html/index.html
-
-# --- END OF FINAL APACHE CONFIGURATION FIX ---
+RUN chown -R www-data:www-data /usr/src/app/storage /usr/src/app/bootstrap/cache
+RUN chmod -R 775 /usr/src/app/storage /usr/src/app/bootstrap/cache
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
@@ -70,7 +46,41 @@ RUN composer install --no-dev --optimize-autoloader
 RUN npm install
 RUN npm run build
 
-# --- 4. OPTIMIZED RUNTIME ENVIRONMENT ---
+# --- 4. APACHE CONTAINER SETUP (The Unstoppable Fix) ---
+
+# 1. Clean up default Apache content (the old /var/www/html)
+RUN rm -rf /var/www/html
+
+# 2. Delete the default VHost
+RUN a2dissite 000-default.conf || true 
+
+# 3. Create the necessary link structure: 
+# Move the compiled app to a new place
+RUN mv /usr/src/app /var/www/app
+
+# 4. Create a symlink named 'html' that points to the 'public' folder of the app.
+# This makes Apache think /var/www/html *is* the public folder, fixing the AH01276 error.
+RUN ln -s /var/www/app/public /var/www/html
+
+# 5. Set final permissions on the actual web root
+RUN chown -R www-data:www-data /var/www/app
+
+# 6. Add a minimal VHost to ensure AllowOverride All is active for the public folder (now /var/www/html)
+RUN echo '<VirtualHost *:80>\n' \
+    '    DocumentRoot /var/www/html\n' \
+    '    <Directory /var/www/html>\n' \
+    '        Options Indexes FollowSymLinks\n' \
+    '        AllowOverride All\n' \
+    '        Require all granted\n' \
+    '    </Directory>\n' \
+    '</VirtualHost>' > /etc/apache2/sites-available/laravel-final.conf
+
+# 7. Enable the minimal VHost.
+RUN a2ensite laravel-final.conf
+
+# --- END OF FINAL APACHE CONFIGURATION FIX ---
+
+# --- 5. OPTIMIZED RUNTIME ENVIRONMENT ---
 # Define build environment variables
 ENV VITE_APP_URL=https://bellitek-1.onrender.com
 
@@ -85,7 +95,7 @@ RUN cp .env.example .env
 # Expose the internal port
 EXPOSE 10000
 
-# --- 5. PRODUCTION COMMANDS (Use the Apache server) ---
+# --- 6. PRODUCTION COMMANDS (Use the Apache server) ---
 # Use an entrypoint script to run commands BEFORE Apache starts
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
