@@ -59,13 +59,12 @@ RUN a2dissite 000-default.conf || true
 RUN mv /usr/src/app /var/www/app
 
 # 4. Create a symlink named 'html' that points to the 'public' folder of the app.
-# This makes Apache think /var/www/html *is* the public folder, fixing the AH01276 error.
 RUN ln -s /var/www/app/public /var/www/html
 
 # 5. Set final permissions on the actual web root
 RUN chown -R www-data:www-data /var/www/app
 
-# 6. Add a minimal VHost to ensure AllowOverride All is active for the public folder (now /var/www/html)
+# 6. Add a minimal VHost
 RUN echo '<VirtualHost *:80>\n' \
     '    DocumentRoot /var/www/html\n' \
     '    <Directory /var/www/html>\n' \
@@ -77,6 +76,10 @@ RUN echo '<VirtualHost *:80>\n' \
 
 # 7. Enable the minimal VHost.
 RUN a2ensite laravel-final.conf
+
+# --- CRITICAL FIX for ERR_TOO_MANY_REDIRECTS ---
+# 8. Tell Laravel to trust all proxies (Render, Load Balancers, etc.)
+RUN sed -i "s|protected \$proxies = null;|protected \$proxies = '\*';|g" /var/www/app/app/Http/Middleware/TrustProxies.php
 
 # --- END OF FINAL APACHE CONFIGURATION FIX ---
 
