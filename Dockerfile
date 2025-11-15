@@ -35,17 +35,21 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX (Symlink + Runtime Fix) ---
+# --- START OF APACHE CONFIGURATION FIX (Custom VHost Strategy) ---
 
-# 1. Remove the default index.html
+# 1. Copy the custom Laravel-specific virtual host configuration
+COPY laravel.conf /etc/apache2/sites-available/laravel.conf
+
+# 2. Disable the default site and enable the new Laravel site (CRITICAL FIX)
+RUN a2dissite 000-default.conf
+RUN a2ensite laravel.conf
+
+# 3. Remove the default index.html
 RUN rm -f /var/www/html/index.html
 
-# 2. CRITICAL FIX: Create a symlink for index.php. 
-# The permission fix is now handled by the entrypoint.sh script below.
+# 4. CRITICAL FIX: Create a symlink for index.php. 
+# This requires the explicit FollowSymLinks setting in laravel.conf to work.
 RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
-
-# 3. Explicitly set DocumentRoot in the default conf as a fallback.
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
 # --- END OF APACHE CONFIGURATION FIX ---
 
