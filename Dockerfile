@@ -35,26 +35,29 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX (Symlink + SED Strategy) ---
+# --- START OF FINAL, GUARANTEED APACHE CONFIGURATION FIX ---
 
-# 1. Remove the default index.html
+# 1. Create a clean, custom virtual host file directly in the image (no COPY command needed).
+# We explicitly set the DocumentRoot and allow all overrides in the public folder.
+RUN echo '<VirtualHost *:80>\n' \
+    '    DocumentRoot /var/www/html/public\n' \
+    '    <Directory /var/www/html/public>\n' \
+    '        Options Indexes FollowSymLinks\n' \
+    '        AllowOverride All\n' \
+    '        Require all granted\n' \
+    '    </Directory>\n' \
+    '</VirtualHost>' > /etc/apache2/sites-available/laravel.conf
+
+# 2. Disable the problematic default site configuration.
+RUN a2dissite 000-default.conf
+
+# 3. Enable our clean, new configuration.
+RUN a2ensite laravel.conf
+
+# 4. Remove default index.html
 RUN rm -f /var/www/html/index.html
 
-# 2. CRITICAL FIX: Create a symlink for index.php. 
-RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
-
-# 3. GUARANTEED FIX for AH00037: Force 'Options FollowSymLinks' on the general directory block.
-# This finds the Options line inside the /var/www/ block and replaces it completely 
-# to ensure FollowSymLinks is active.
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options.*/Options FollowSymLinks/g' /etc/apache2/apache2.conf
-
-# 4. GUARANTEE AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
-
-# 5. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-
-# --- END OF APACHE CONFIGURATION FIX ---
+# --- END OF FINAL APACHE CONFIGURATION FIX ---
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
