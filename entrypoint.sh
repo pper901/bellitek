@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Change directory to the application root where artisan resides
+cd /var/www/app
+
 # 1. Run Database Migrations
 echo "Running database migrations..."
 php artisan migrate --force
