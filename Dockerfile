@@ -24,7 +24,7 @@ RUN a2enmod rewrite
 # Add ServerName to suppress AH00558 warning (optional, but cleaner logs)
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# --- 2. APPLICATION SETUP (THE FINAL DIRECTORY SWAP) ---
+# --- 2. APPLICATION SETUP (DIRECTORY SWAP) ---
 # Set temporary working directory for file copy
 WORKDIR /usr/src/app
 
@@ -64,18 +64,22 @@ RUN ln -s /var/www/app/public /var/www/html
 # 5. Set final permissions on the actual web root
 RUN chown -R www-data:www-data /var/www/app
 
-# 6. Add a minimal VHost
+# 6. Add the FINAL VHost configuration
 RUN echo '<VirtualHost *:80>\n' \
     '    DocumentRoot /var/www/html\n' \
+    '    \n' \
+    '    # CRITICAL: Disable Apache canonicalization that can cause redirects\n' \
+    '    UseCanonicalName Off\n' \
+    '    \n' \
     '    <Directory /var/www/html>\n' \
     '        Options Indexes FollowSymLinks\n' \
     '        AllowOverride All\n' \
     '        Require all granted\n' \
     '    </Directory>\n' \
-    '</VirtualHost>' > /etc/apache2/sites-available/laravel-final.conf
+    '</VirtualHost>' > /etc/apache2/sites-available/laravel-ultimate.conf
 
-# 7. Enable the minimal VHost.
-RUN a2ensite laravel-final.conf
+# 7. Enable the ultimate VHost.
+RUN a2ensite laravel-ultimate.conf
 
 # --- END OF FINAL APACHE CONFIGURATION FIX ---
 
