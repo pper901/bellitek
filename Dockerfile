@@ -89,8 +89,9 @@ ENV PORT=10000
 RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 # -----------------------------------------------
 
+# FIX: Update the path since the files are now moved to /var/www/app
 # Copy .env.example to .env (Will be overwritten by Render secrets at runtime)
-RUN cp .env.example .env
+RUN cp /var/www/app/.env.example /var/www/app/.env
 
 # Expose the internal port
 EXPOSE 10000
