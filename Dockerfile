@@ -79,7 +79,8 @@ RUN a2ensite laravel-final.conf
 
 # --- CRITICAL FIX for ERR_TOO_MANY_REDIRECTS ---
 # 8. Tell Laravel to trust all proxies (Render, Load Balancers, etc.)
-RUN sed -i "s|protected \$proxies = null;|protected \$proxies = '\*';|g" /var/www/app/app/Http/Middleware/TrustProxies.php
+# FIX: Removed the unnecessary extra '/app' from the path.
+RUN sed -i "s|protected \$proxies = null;|protected \$proxies = '\*';|g" /var/www/app/Http/Middleware/TrustProxies.php
 
 # --- END OF FINAL APACHE CONFIGURATION FIX ---
 
