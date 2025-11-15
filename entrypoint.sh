@@ -4,16 +4,16 @@
 cd /var/www/app
 
 # --- CRITICAL FIX FOR REDIRECT LOOP (ERR_TOO_MANY_REDIRECTS) ---
-# Inject code into public/index.php to force HTTPS recognition, bypassing proxy confusion.
-INDEX_FILE="/var/www/app/public/index.php"
+# Inject \URL::forceScheme('https'); into the AppServiceProvider's boot method.
+# This forces Laravel to generate all internal URLs and redirects using HTTPS.
+SERVICE_PROVIDER="/var/www/app/app/Providers/AppServiceProvider.php"
 
-if [ -f "$INDEX_FILE" ]; then
-    echo "Patching index.php to force HTTPS recognition..."
-    # Insert the necessary PHP code right after the opening <?php tag
-    # This tells the Request object that the connection is secure by setting $_SERVER['HTTPS']
-    sed -i '/<?php/a if (isset($_SERVER[\x27HTTP_X_FORWARDED_PROTO\x27]) && $_SERVER[\x27HTTP_X_FORWARDED_PROTO\x27] === \x27https\x27) { $_SERVER[\x27HTTPS\x27] = \x27on\x27; }' "$INDEX_FILE"
+if [ -f "$SERVICE_PROVIDER" ]; then
+    echo "Patching AppServiceProvider to force HTTPS scheme..."
+    # Insert the necessary code after 'public function boot(): void'
+    sed -i "/public function boot(): void/a \        \Illuminate\Support\Facades\URL::forceScheme('https');" "$SERVICE_PROVIDER"
 else
-    echo "Error: index.php not found at $INDEX_FILE"
+    echo "Error: AppServiceProvider.php not found at $SERVICE_PROVIDER. Redirect loop may persist."
 fi
 # -----------------------------------------------------------------
 
