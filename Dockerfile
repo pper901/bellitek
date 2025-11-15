@@ -35,21 +35,24 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX (Custom VHost Strategy) ---
+# --- START OF APACHE CONFIGURATION FIX (Symlink + SED Strategy) ---
 
-# 1. Copy the custom Laravel-specific virtual host configuration
-COPY laravel.conf /etc/apache2/sites-available/laravel.conf
-
-# 2. Disable the default site and enable the new Laravel site (CRITICAL FIX)
-RUN a2dissite 000-default.conf
-RUN a2ensite laravel.conf
-
-# 3. Remove the default index.html
+# 1. Remove the default index.html
 RUN rm -f /var/www/html/index.html
 
-# 4. CRITICAL FIX: Create a symlink for index.php. 
-# This requires the explicit FollowSymLinks setting in laravel.conf to work.
+# 2. CRITICAL FIX: Create a symlink for index.php. 
 RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
+
+# 3. GUARANTEED FIX for AH00037: Force 'Options FollowSymLinks' on the general directory block.
+# This finds the Options line inside the /var/www/ block and replaces it completely 
+# to ensure FollowSymLinks is active.
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options.*/Options FollowSymLinks/g' /etc/apache2/apache2.conf
+
+# 4. GUARANTEE AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+# 5. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
 # --- END OF APACHE CONFIGURATION FIX ---
 
