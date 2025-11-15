@@ -35,20 +35,22 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF APACHE CONFIGURATION FIX (Symlink Strategy) ---
+# --- START OF FINAL APACHE CONFIGURATION FIX (Symlink + Options Strategy) ---
 
 # 1. Remove the default index.html
 RUN rm -f /var/www/html/index.html
 
 # 2. CRITICAL FIX: Create a symlink for index.php. 
-# This fools Apache into finding the index file in the root directory
-# while still serving the content from the correct /public location.
 RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
 
-# 3. Use SED to ensure AllowOverride is set to All for the public directory (CRITICAL FOR LARAVEL ROUTING)
+# 3. GUARANTEE OPTIONS ARE SET CORRECTLY FOR THE BASE DIRECTORY (Fixes AH00037)
+# This command forces the Options to include FollowSymLinks.
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Options.*/Options FollowSymLinks/g' /etc/apache2/apache2.conf
+
+# 4. GUARANTEE AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-# 4. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
+# 5. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
 
