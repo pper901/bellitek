@@ -35,26 +35,24 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# --- START OF RELIABLE APACHE CONFIGURATION FIX (SED Strategy) ---
+# --- START OF APACHE CONFIGURATION FIX (Symlink Strategy) ---
 
-# 1. Update DocumentRoot in the default virtual host config (000-default.conf)
-# This points the primary site to the /public directory.
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-
-# 2. Add DirectoryIndex to the main Apache config (apache2.conf)
-# This ensures index.php is checked first for any directory request.
-RUN sed -i '/<Directory \/var\/www\/>/a\ \ \ \ DirectoryIndex index.php' /etc/apache2/apache2.conf
-
-# 3. Ensure the Rewrite Engine is always active and AllowOverride is set to All (CRITICAL FOR LARAVEL ROUTING)
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
-
-# 4. Explicitly remove the "Indexes" option from the main /var/www/ Directory block (This prevents AH01276)
-RUN sed -i 's/Options Indexes FollowSymLinks/Options FollowSymLinks/g' /etc/apache2/apache2.conf
-
-# 5. Remove the default index.html provided by the PHP image to prevent conflicts
+# 1. Remove the default index.html
 RUN rm -f /var/www/html/index.html
 
-# --- END OF RELIABLE APACHE CONFIGURATION FIX ---
+# 2. CRITICAL FIX: Create a symlink for index.php. 
+# This fools Apache into finding the index file in the root directory
+# while still serving the content from the correct /public location.
+RUN ln -s /var/www/html/public/index.php /var/www/html/index.php
+
+# 3. Use SED to ensure AllowOverride is set to All for the public directory (CRITICAL FOR LARAVEL ROUTING)
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+
+# 4. Explicitly set DocumentRoot to /var/www/html/public in the default conf as a fallback.
+RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+
+
+# --- END OF APACHE CONFIGURATION FIX ---
 
 # --- 3. COMPOSER & ASSET BUILD ---
 # Install Composer
