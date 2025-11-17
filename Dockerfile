@@ -64,6 +64,15 @@ RUN ln -s /var/www/app/public /var/www/html
 # 5. Set final permissions on the actual web root
 RUN chown -R www-data:www-data /var/www/app
 
+# --- CRITICAL .HTACCESS OVERWRITE ---
+# Overwrite the default .htaccess with a simple, safe version.
+RUN echo 'Options +FollowSymLinks\n' \
+    'RewriteEngine On\n' \
+    '\n' \
+    'RewriteCond %{REQUEST_FILENAME} !-d\n' \
+    'RewriteCond %{REQUEST_FILENAME} !-f\n' \
+    'RewriteRule ^ index.php [L]' > /var/www/app/public/.htaccess
+
 # 6. Add the FINAL VHost configuration
 RUN echo '<VirtualHost *:80>\n' \
     '    DocumentRoot /var/www/html\n' \
