@@ -13,23 +13,23 @@ Route::middleware(['auth', 'is_admin'])
     ->group(function () {
 
         // Admin dashboard pages
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/products', [AdminController::class, 'products'])->name('products');
-        Route::get('/repairs', [AdminController::class, 'repairs'])->name('repairs');
-        Route::get('/repair-logs', [AdminController::class, 'repairLogs'])->name('repairLogs');
-        Route::get('/sales', [AdminController::class, 'sales'])->name('sales');
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/products', [AdminController::class, 'products'])->name('admin.products');
+        Route::get('/repairs', [AdminController::class, 'repairs'])->name('admin.repairs');
+        Route::get('/repair-logs', [AdminController::class, 'repairLogs'])->name('admin.repairLogs');
+        Route::get('/sales', [AdminController::class, 'sales'])->name('admin.sales');
 
         // Guides CRUD
         Route::prefix('guides')->name('guides.')->group(function () {
 
-            Route::get('/', [GuideController::class, 'index'])->name('index');
-            Route::get('/create', [GuideController::class, 'create'])->name('create');
-            Route::post('/store', [GuideController::class, 'store'])->name('store');
+            Route::get('/', [GuideController::class, 'index'])->name('admin.guides.index');
+            Route::get('/create', [GuideController::class, 'create'])->name('admin.guides.create');
+            Route::post('/store', [GuideController::class, 'store'])->name('admin.guides.store');
 
-            Route::get('/{guide}/edit', [GuideController::class, 'edit'])->name('edit');
-            Route::put('/{guide}', [GuideController::class, 'update'])->name('update');
+            Route::get('/{guide}/edit', [GuideController::class, 'edit'])->name('admin.guides.edit');
+            Route::put('/{guide}', [GuideController::class, 'update'])->name('admin.guides.update');
 
-            Route::get('/{guide}', [GuideController::class, 'show'])->name('show');
+            Route::get('/{guide}', [GuideController::class, 'show'])->name('admin.guides.show');
         });
     });
 
