@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('admin.layout')
 
 @section('content')
 <h2 class="text-2xl font-bold mb-4">Admin - Repair Requests</h2>
