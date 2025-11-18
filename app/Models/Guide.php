@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\GuideResource; // <-- CRITICAL FIX: Import the related model
 
 class Guide extends Model
 {
@@ -12,7 +13,7 @@ class Guide extends Model
 
     public function resources()
     {
+        // Now GuideResource is correctly referenced
         return $this->hasMany(GuideResource::class);
     }
 }
-

@@ -63,19 +63,34 @@ document.getElementById('add-resource').onclick = () => {
     box.className = "border p-4 mt-4 rounded bg-gray-50";
 
     box.innerHTML = `
-        <label>Cause</label>
-        <input name="resources[][cause]" class="input" placeholder="e.g software bug">
+        <div class="grid grid-cols-2 gap-4">
 
-        <label>Solution</label>
-        <input name="resources[][solution]" class="input" placeholder="update phone">
+            <div>
+                <label class="font-semibold">Cause</label>
+                <input name="resources[][cause]" class="input" placeholder="e.g. software bug">
+            </div>
 
-        <label>Detailed Steps</label>
-        <textarea name="resources[][details]" class="input h-32"
-                  placeholder="detailed troubleshooting..."></textarea>
+            <div>
+                <label class="font-semibold">Solution</label>
+                <input name="resources[][solution]" class="input" placeholder="update phone">
+            </div>
+
+            <!-- FULL WIDTH TEXTAREA -->
+            <div class="col-span-2">
+                <label class="font-semibold">Detailed Steps</label>
+                <textarea
+                    name="resources[][details]"
+                    class="input h-40 w-full"
+                    placeholder="Write detailed troubleshooting steps…"
+                ></textarea>
+            </div>
+
+        </div>
     `;
 
     document.getElementById('resource-wrapper').appendChild(box);
 }
 </script>
+
 
 @endsection
