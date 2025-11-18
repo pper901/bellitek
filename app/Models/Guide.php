@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\GuideResource; // <-- CRITICAL FIX: Import the related model
+use App\Models\GuideResource; 
 
 class Guide extends Model
 {
