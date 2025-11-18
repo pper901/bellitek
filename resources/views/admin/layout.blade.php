@@ -13,7 +13,7 @@
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.dashboard') ? 'bg-gray-800' : '' }}">🏠 Dashboard</a>
-            <a href="{{ route('admin.guides') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.guides') ? 'bg-gray-800' : '' }}">📚 Guides</a>
+            <a href="{{ route('admin.guides.index') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.guides') ? 'bg-gray-800' : '' }}">📚 Guides</a>
             <a href="{{ route('admin.products') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.products') ? 'bg-gray-800' : '' }}">🛍 Products</a>
             <a href="{{ route('admin.repairs') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.repairs') ? 'bg-gray-800' : '' }}">🧰 Repairs</a>
             <a href="{{ route('admin.repairLogs') }}" class="block px-3 py-2 rounded hover:bg-gray-800 {{ request()->routeIs('admin.repairLogs') ? 'bg-gray-800' : '' }}">🧾 Repair Logs</a>
