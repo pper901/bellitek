@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Guide;
+use App\Models\GuideResource; // Ensure this is imported
 
 class GuideController extends Controller
 {
     public function index()
     {
-        $guides = Guide::latest()->paginate(10);
+        $guides = Guide::latest()->paginate(10); 
         return view('admin.guides.index', compact('guides'));
     }
 
@@ -20,14 +21,30 @@ class GuideController extends Controller
 
     public function store(Request $request)
     {
-        $guide = Guide::create($request->only([
+        // 1. Filter and create the main Guide record
+        $guideData = $request->only([
             'device', 'category', 'brand', 'series', 'model', 'issue'
-        ]));
+        ]);
+        
+        $guide = Guide::create($guideData); 
 
-        foreach ($request->resources as $res) {
-            $guide->resources()->create($res);
+        // 2. CRITICAL FIX: Check if the 'resources' key exists and is an array 
+        // before attempting to loop over it. This prevents the 500 error 
+        // if no resource fields were added.
+        if ($request->has('resources') && is_array($request->resources)) {
+            
+            // Define the fields allowed in the GuideResource model's $fillable array
+            $resourceFillables = ['cause', 'solution', 'details'];
+            
+            foreach ($request->resources as $res) {
+                
+                // Filter the resource data for Mass Assignment protection
+                $resourceData = array_intersect_key($res, array_flip($resourceFillables));
+                
+                $guide->resources()->create($resourceData);
+            }
         }
-
+        
         return redirect()->route('admin.guides.index');
     }
 
@@ -48,11 +65,15 @@ class GuideController extends Controller
         ]));
 
         $guide->resources()->delete();
-        foreach ($request->resources as $res) {
-            $guide->resources()->create($res);
+        
+        if ($request->has('resources') && is_array($request->resources)) {
+            $resourceFillables = ['cause', 'solution', 'details'];
+            foreach ($request->resources as $res) {
+                $resourceData = array_intersect_key($res, array_flip($resourceFillables));
+                $guide->resources()->create($resourceData);
+            }
         }
 
         return redirect()->route('admin.guides.index');
     }
 }
-
