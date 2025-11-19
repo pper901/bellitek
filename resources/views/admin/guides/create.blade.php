@@ -64,56 +64,63 @@
 </div>
 
 <script>
-// Initialize a counter to track the unique index for resources
+// --- JAVASCRIPT FIX ---
+// The HTML template is now a pure JS string defined entirely within the script block.
+
 let resourceCounter = 0;
 const resourceWrapper = document.getElementById('resource-wrapper');
 
-document.getElementById('add-resource').onclick = () => {
-// Get the current unique index
-const index = resourceCounter;
+// Function to generate the resource HTML string with the dynamic index
+function getResourceHtml(index) {
+return `
+<div class="border p-6 mt-4 rounded-lg bg-white shadow-inner resource-block">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-let box = document.createElement(&#39;div&#39;);
-box.className = &quot;border p-6 mt-4 rounded-lg bg-white shadow-inner&quot;;
+            &lt;div&gt;
+                &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Cause&lt;/label&gt;
+                &lt;input name=&quot;resources[${index}][cause]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;e.g. software bug&quot;&gt;
+            &lt;/div&gt;
 
-// Use the unique index in the input names to group the fields!
-box.innerHTML = `
-    &lt;div class=&quot;grid grid-cols-1 md:grid-cols-2 gap-4&quot;&gt;
+            &lt;div&gt;
+                &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Solution&lt;/label&gt;
+                &lt;input name=&quot;resources[${index}][solution]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;update phone&quot;&gt;
+            &lt;/div&gt;
 
-        &lt;div&gt;
-            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Cause&lt;/label&gt;
-            &lt;input name=&quot;resources[${index}][cause]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;e.g. software bug&quot;&gt;
-        &lt;/div&gt;
+            &lt;!-- FULL WIDTH TEXTAREA --&gt;
+            &lt;div class=&quot;col-span-1 md:col-span-2&quot;&gt;
+                &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Detailed Steps&lt;/label&gt;
+                &lt;textarea
+                    name=&quot;resources[${index}][details]&quot;
+                    class=&quot;input h-32 w-full mt-1 border-gray-300 rounded-md shadow-sm&quot;
+                    placeholder=&quot;Write detailed troubleshooting steps…&quot;
+                &gt;&lt;/textarea&gt;
 
-        &lt;div&gt;
-            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Solution&lt;/label&gt;
-            &lt;input name=&quot;resources[${index}][solution]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;update phone&quot;&gt;
-        &lt;/div&gt;
 
-        &lt;!-- FULL WIDTH TEXTAREA --&gt;
-        &lt;div class=&quot;col-span-1 md:col-span-2&quot;&gt;
-            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Detailed Steps&lt;/label&gt;
-            &lt;textarea
-                name=&quot;resources[${index}][details]&quot;
-                class=&quot;input h-32 w-full mt-1 border-gray-300 rounded-md shadow-sm&quot;
-                placeholder=&quot;Write detailed troubleshooting steps…&quot;
-            &gt;&lt;/textarea&gt;
-
+            </div>
 
         </div>
-
     </div>
 `;
 
+
+}
+
+document.getElementById('add-resource').onclick = () => {
+const index = resourceCounter;
+
+let box = document.createElement('div');
+// Call the function to get the clean HTML string
+box.innerHTML = getResourceHtml(index);
+
 resourceWrapper.appendChild(box);
 
-// Increment the counter for the next resource block
 resourceCounter++;
 
 
 }
 
-// Optional: Add a single resource block on page load for better UX
 document.addEventListener('DOMContentLoaded', () => {
+// Start with one resource block visible for better UX
 document.getElementById('add-resource').click();
 });
 </script>
