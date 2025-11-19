@@ -81,7 +81,7 @@ class GuideController extends Controller
     {
         $devices = Guide::select('device')->distinct()->orderBy('device')->get();
 
-        return view('guides.devices', compact('devices'));
+        return view('pages.guides.devices', compact('devices'));
     }
 
     public function categories($device)
@@ -92,7 +92,7 @@ class GuideController extends Controller
             ->orderBy('category')
             ->get();
 
-        return view('guides.categories', compact('device', 'categories'));
+        return view('pages.guides.categories', compact('device', 'categories'));
     }
 
     public function issues($device, $category)
@@ -104,7 +104,7 @@ class GuideController extends Controller
             ->orderBy('issue')
             ->get();
 
-        return view('guides.issues', compact('device', 'category', 'issues'));
+        return view('pages.guides.issues', compact('device', 'category', 'issues'));
     }
 
     public function showU($device, $category, $issue)
@@ -115,7 +115,7 @@ class GuideController extends Controller
             ->where('issue', $issue)
             ->get();
 
-        return view('guides.show', compact('device', 'category', 'issue', 'guides'));
+        return view('pages.guides.show', compact('device', 'category', 'issue', 'guides'));
     }
 
 }
