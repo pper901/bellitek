@@ -4,93 +4,118 @@
 
 @section('content')
 
-<div class="bg-white p-6 rounded shadow">
+<div class="bg-white p-6 rounded-xl shadow-lg">
 
-<h2 class="text-xl font-bold mb-4">Create New Guide</h2>
+<h2 class="text-3xl font-extrabold mb-6 text-gray-800">Create New Guide</h2>
 
-<form method="POST" action="{{ route('admin.guides.store') }}">
-    @csrf
+<form method="POST" action="{{ route('admin.guides.store') }}" class="space-y-6">
+@csrf
 
-    <div class="grid grid-cols-2 gap-4">
-
-        <div>
-            <label>Device</label>
-            <input name="device" class="input" placeholder="Phone / Laptop">
-        </div>
-
-        <div>
-            <label>Category</label>
-            <input name="category" class="input" placeholder="Android / iPhone">
-        </div>
-
-        <div>
-            <label>Brand</label>
-            <input name="brand" class="input" placeholder="Samsung / HP">
-        </div>
-
-        <div>
-            <label>Series</label>
-            <input name="series" class="input" placeholder="S Series">
-        </div>
-
-        <div>
-            <label>Model</label>
-            <input name="model" class="input" placeholder="Galaxy S25">
-        </div>
-
-        <div>
-            <label>Issue</label>
-            <input name="issue" class="input" placeholder="Screen has lines">
-        </div>
-
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+    <!-- Main Guide Details -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Device</label>
+        <input name="device" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Phone / Laptop">
     </div>
 
-    <h3 class="font-bold mt-6 mb-2">Causes & Solutions</h3>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Category</label>
+        <input name="category" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Android / iPhone">
+    </div>
 
-    <div id="resource-wrapper"></div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Brand</label>
+        <input name="brand" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Samsung / HP">
+    </div>
 
-    <button type="button" id="add-resource"
-        class="mt-2 bg-gray-700 text-white px-4 py-2 rounded">+ Add Cause & Solution</button>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Series</label>
+        <input name="series" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="S Series">
+    </div>
 
-    <button class="mt-4 bg-blue-500 text-white px-6 py-2 rounded">Save Guide</button>
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Model</label>
+        <input name="model" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Galaxy S25">
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Issue</label>
+        <input name="issue" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm" placeholder="Screen has lines">
+    </div>
+</div>
+
+<h3 class="font-bold text-xl mt-8 mb-2 border-b pb-1">Causes & Solutions</h3>
+
+<div id="resource-wrapper">
+    <!-- Resource Blocks Go Here -->
+</div>
+
+<button type="button" id="add-resource"
+    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-150 ease-in-out shadow-md">
+    + Add Cause & Solution
+</button>
+
+<button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 ease-in-out shadow-xl">
+    Save Guide
+</button>
+
 
 </form>
 </div>
 
 <script>
+// Initialize a counter to track the unique index for resources
+let resourceCounter = 0;
+const resourceWrapper = document.getElementById('resource-wrapper');
+
 document.getElementById('add-resource').onclick = () => {
-    let box = document.createElement('div');
-    box.className = "border p-4 mt-4 rounded bg-gray-50";
+// Get the current unique index
+const index = resourceCounter;
 
-    box.innerHTML = `
-        <div class="grid grid-cols-2 gap-4">
+let box = document.createElement(&#39;div&#39;);
+box.className = &quot;border p-6 mt-4 rounded-lg bg-white shadow-inner&quot;;
 
-            <div>
-                <label class="font-semibold">Cause</label>
-                <input name="resources[][cause]" class="input" placeholder="e.g. software bug">
-            </div>
+// Use the unique index in the input names to group the fields!
+box.innerHTML = `
+    &lt;div class=&quot;grid grid-cols-1 md:grid-cols-2 gap-4&quot;&gt;
 
-            <div>
-                <label class="font-semibold">Solution</label>
-                <input name="resources[][solution]" class="input" placeholder="update phone">
-            </div>
+        &lt;div&gt;
+            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Cause&lt;/label&gt;
+            &lt;input name=&quot;resources[${index}][cause]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;e.g. software bug&quot;&gt;
+        &lt;/div&gt;
 
-            <!-- FULL WIDTH TEXTAREA -->
-            <div class="col-span-2">
-                <label class="font-semibold">Detailed Steps</label>
-                <textarea
-                    name="resources[][details]"
-                    class="input h-40 w-full"
-                    placeholder="Write detailed troubleshooting steps…"
-                ></textarea>
-            </div>
+        &lt;div&gt;
+            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Solution&lt;/label&gt;
+            &lt;input name=&quot;resources[${index}][solution]&quot; class=&quot;input mt-1 block w-full border-gray-300 rounded-md shadow-sm&quot; placeholder=&quot;update phone&quot;&gt;
+        &lt;/div&gt;
+
+        &lt;!-- FULL WIDTH TEXTAREA --&gt;
+        &lt;div class=&quot;col-span-1 md:col-span-2&quot;&gt;
+            &lt;label class=&quot;font-semibold text-sm block text-gray-700&quot;&gt;Detailed Steps&lt;/label&gt;
+            &lt;textarea
+                name=&quot;resources[${index}][details]&quot;
+                class=&quot;input h-32 w-full mt-1 border-gray-300 rounded-md shadow-sm&quot;
+                placeholder=&quot;Write detailed troubleshooting steps…&quot;
+            &gt;&lt;/textarea&gt;
+
 
         </div>
-    `;
 
-    document.getElementById('resource-wrapper').appendChild(box);
+    </div>
+`;
+
+resourceWrapper.appendChild(box);
+
+// Increment the counter for the next resource block
+resourceCounter++;
+
+
 }
-</script>
 
+// Optional: Add a single resource block on page load for better UX
+document.addEventListener('DOMContentLoaded', () => {
+document.getElementById('add-resource').click();
+});
+</script>
 
 @endsection
