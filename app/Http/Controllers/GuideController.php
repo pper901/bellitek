@@ -76,4 +76,46 @@ class GuideController extends Controller
 
         return redirect()->route('admin.guides.index');
     }
+
+    public function devices()
+    {
+        $devices = Guide::select('device')->distinct()->orderBy('device')->get();
+
+        return view('guides.devices', compact('devices'));
+    }
+
+    public function categories($device)
+    {
+        $categories = Guide::where('device', $device)
+            ->select('category')
+            ->distinct()
+            ->orderBy('category')
+            ->get();
+
+        return view('guides.categories', compact('device', 'categories'));
+    }
+
+    public function issues($device, $category)
+    {
+        $issues = Guide::where('device', $device)
+            ->where('category', $category)
+            ->select('issue')
+            ->distinct()
+            ->orderBy('issue')
+            ->get();
+
+        return view('guides.issues', compact('device', 'category', 'issues'));
+    }
+
+    public function showU($device, $category, $issue)
+    {
+        $guides = Guide::with('resources')
+            ->where('device', $device)
+            ->where('category', $category)
+            ->where('issue', $issue)
+            ->get();
+
+        return view('guides.show', compact('device', 'category', 'issue', 'guides'));
+    }
+
 }

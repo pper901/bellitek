@@ -54,9 +54,17 @@ Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 
 Route::get('/track', [RepairController::class, 'trackForm'])->name('track.form');
 Route::post('/track', [RepairController::class, 'trackSubmit'])->name('track.submit');
-Route::get('/test-cookie', function () {
-    cookie()->queue('hello', 'world', 60);
-    return 'cookie set';
+
+Route::prefix('guides')->group(function () {
+
+    Route::get('/', [GuideController::class, 'devices'])->name('guides.devices');
+
+    Route::get('/{device}', [GuideController::class, 'categories'])->name('guides.categories');
+
+    Route::get('/{device}/{category}', [GuideController::class, 'issues'])->name('guides.issues');
+
+    Route::get('/{device}/{category}/{issue}', [GuideController::class, 'showU'])->name('guides.show');
+
 });
 
 

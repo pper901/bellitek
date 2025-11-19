@@ -62,7 +62,7 @@
     <div>
         <img src="{{ asset('images/tower.jpg') }}" class="mx-auto mb-4 rounded-lg h-48 w-full object-cover" alt="ICT Installation"/>
         <h3 class="font-bold text-xl mb-2 text-gray-800">ICT Installations</h3>
-        <p class="text-gray-600 mb-6">We handle network setups, CCTV, and office ICT infrastructure for businesses.</p>
+        <p class="text-gray-600 mb-6">We handle network setups, CCTV, and office ICT infrastructure for businesses and schools.</p>
     </div>
     <a href="/contact" class="mt-auto block bg-gray-800 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition duration-150">
         Contact Us Now
