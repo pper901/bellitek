@@ -7,9 +7,9 @@
 <title>Bellitek | The Only Tech Store You Need</title>
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
 
-<!-- Navbar -->
+<!-- Navbar is fixed and outside the flow, which is fine -->
 <nav class="bg-white shadow-md fixed top-0 w-full z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         
@@ -33,7 +33,6 @@
 
         <!-- Authentication Links (Right side) -->
         <div class="flex space-x-4 text-sm font-medium">
-            {{-- You'll likely need to update these URLs once you define them --}}
             <a href="/login" class="text-gray-600 hover:text-red-600 transition duration-150 border-r pr-4">Login</a>
             <a href="/register" class="text-red-600 hover:text-red-800 transition duration-150 font-semibold">Sign Up</a>
         </div>
@@ -41,7 +40,8 @@
     </div>
 </nav>
 
-<main class="pt-24">
+{{-- CRITICAL FIX: Added flex-grow to make this element fill all remaining vertical space --}}
+<main class="pt-24 flex-grow"> 
     @yield('content')
 </main>
 
