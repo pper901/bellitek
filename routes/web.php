@@ -5,6 +5,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\RepairController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'is_admin'])
