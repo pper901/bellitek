@@ -14,7 +14,6 @@ Route::middleware(['auth', 'is_admin'])
 
         // Admin dashboard pages
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-        Route::get('/products', [AdminController::class, 'products'])->name('products');
         Route::get('/repairs', [AdminController::class, 'repairs'])->name('repairs');
         Route::get('/repair-logs', [AdminController::class, 'repairLogs'])->name('repairLogs');
         Route::get('/sales', [AdminController::class, 'sales'])->name('sales');
