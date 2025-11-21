@@ -3,8 +3,38 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class Product extends Model
 {
-    //
+    use HasFactory, SoftDeletes;
+
+
+    protected $fillable = [
+    'type','category','brand','name','slug','description','specification',
+    'content','stock','price','condition','status','user_id'
+    ];
+
+
+    protected static function booted()
+    {
+        static::creating(function ($product) {
+            if (empty($product->slug)) {
+            $product->slug = Str::slug($product->name . '-' . uniqid());
+            }
+        });
+    }
+
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class);
+    }
+
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
+
