@@ -37,6 +37,11 @@
             <option value="fairly_used">Fairly Used</option>
         </select>
     </div>
+    
+    <div>
+        <label>Purchase Price (₦)</label>
+        <input type="number" name="purchase_price" class="input w-full" placeholder="50000">
+    </div>
 
     <div>
         <label>Price (₦)</label>
@@ -46,6 +51,11 @@
     <div>
         <label>Quantity</label>
         <input type="number" name="quantity" class="input w-full" value="1">
+    </div>
+    
+    <div class="mb-3">
+        <label for="weight">Weight (kg)</label>
+        <input type="number" step="0.01" class="form-control" name="weight" id="weight" required>
     </div>
 
     <div class="col-span-2">

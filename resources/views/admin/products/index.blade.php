@@ -54,14 +54,14 @@
 
             <td class="p-2">
                 @if ($product->images->first())
-                    <img src="{{ asset('storage/' . $product->images->first()->image_path) }}"
+                    <img src="{{ asset('storage/' . $product->images->first()->path) }}"
                          class="w-16 h-16 object-cover rounded">
                 @endif
             </td>
 
             <td class="p-2 font-semibold">{{ $product->name }}</td>
             <td class="p-2">₦{{ number_format($product->price) }}</td>
-            <td class="p-2">{{ $product->quantity }}</td>
+            <td class="p-2">{{ $product->stock }}</td>
 
             <td class="p-2">{{ ucfirst($product->type) }}</td>
 

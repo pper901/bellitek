@@ -15,7 +15,7 @@ class OrderItem extends Model
     use HasFactory;
 
 
-    protected $fillable = ['order_id','product_id','qty','price'];
+    protected $fillable = ['order_id','product_id','qty','price','total'];
 
 
     public function product()

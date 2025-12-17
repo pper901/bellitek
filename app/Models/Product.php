@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;   // ← ADD THIS
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\User;
 
 class Product extends Model
@@ -12,7 +14,7 @@ class Product extends Model
 
     protected $fillable = [
     'type','category','brand','name','slug','description','specification',
-    'content','stock','price','condition','status','user_id'
+    'content','stock','price','purchase_price','weight','condition','status','user_id'
     ];
 
 

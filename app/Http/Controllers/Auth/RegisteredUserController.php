@@ -45,6 +45,20 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // If user is admin → go to admin dashboard
+        if (auth()->user()->is_admin ?? false) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        // Normal user → send them back to previous page
+        $previous = url()->previous();
+
+        // Prevent redirecting to login/register pages
+        if (str_contains($previous, '/login') || str_contains($previous, '/register')) {
+            $previous = '/';
+        }
+
+        return redirect()->intended($previous);
+
     }
 }

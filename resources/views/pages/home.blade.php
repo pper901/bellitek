@@ -8,7 +8,7 @@
 
 <div class="flex justify-center space-x-4">
     {{-- Primary CTA for existing repairs --}}
-    <a href="/track" class="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition duration-150 shadow-lg">
+    <a href="/repair/book" class="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition duration-150 shadow-lg">
         Track Your Repair
     </a>
 
@@ -18,11 +18,6 @@
         @if(auth()->user()->role === 'admin')
             <a href="{{ route('admin.dashboard') }}" class="bg-green-600 px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition duration-150 shadow-lg">
                 Go to Admin Dashboard
-            </a>
-        @else
-            {{-- Assuming 'user.dashboard' is now defined or linked elsewhere --}}
-            <a href="/dashboard" class="bg-green-600 px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition duration-150 shadow-lg">
-                Go to Dashboard
             </a>
         @endif
     @endauth

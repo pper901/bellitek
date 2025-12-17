@@ -31,7 +31,8 @@ class AuthenticatedSessionController extends Controller
                 logger('Login success', ['user' => auth()->user()]);
                 return redirect()->route('admin.dashboard');
             } else {
-                return redirect()->route('dashboard');
+                // Normal user → redirect back to previous page
+                return redirect()->intended();
             }
     }
 
