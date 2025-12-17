@@ -105,7 +105,7 @@ RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 RUN cp /var/www/app/.env.example /var/www/app/.env
 
 # Expose the internal port
-EXPOSE 10000
+EXPOSE 100
 
 # --- 6. PRODUCTION COMMANDS (Use the Apache server) ---
 # Use an entrypoint script to run commands BEFORE Apache starts
