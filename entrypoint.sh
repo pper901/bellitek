@@ -25,6 +25,7 @@ php artisan migrate --force
 # 4. Cache configuration
 echo "Rebuilding configuration and routes..."
 php artisan config:cache
+php artisan cache:clear
 php artisan route:cache
 
 # 5. Start the main command (Apache)
