@@ -1,37 +1,50 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        // Check if the table and column exist before attempting to modify
-        if (Schema::hasTable('repairs') && Schema::hasColumn('repairs', 'status')) {
-            Schema::table('repairs', function (Blueprint $table) {
-                // Change the status column to VARCHAR with a length of 50.
-                // We use change() to modify an existing column definition.
-                $table->string('status', 50)->change();
-            });
-        }
+        // Step 1: Change the column type
+        Schema::table('repairs', function (Blueprint $table) {
+            $table->string('status', 50)->nullable()->change(); // nullable temporarily
+        });
+
+        // Step 2: Drop old check constraint if exists
+        DB::statement('ALTER TABLE repairs DROP CONSTRAINT IF EXISTS repairs_status_check;');
+
+        // Step 3: Add new check constraint
+        DB::statement("
+            ALTER TABLE repairs
+            ADD CONSTRAINT repairs_status_check
+            CHECK (status IN ('pending', 'received', 'diagnosing', 'repairing', 'completed', 'ready_for_pickup'));
+        ");
+
+        // Step 4: Set default and NOT NULL
+        DB::statement("
+            ALTER TABLE repairs
+            ALTER COLUMN status SET DEFAULT 'pending',
+            ALTER COLUMN status SET NOT NULL;
+        ");
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        // Revert the status column size back to a smaller, safer default (e.g., 25)
-        // Adjust this number if you know the original size.
-        if (Schema::hasTable('repairs') && Schema::hasColumn('repairs', 'status')) {
-            Schema::table('repairs', function (Blueprint $table) {
-                $table->string('status', 25)->change();
-            });
-        }
+        // Revert type to 25 chars
+        Schema::table('repairs', function (Blueprint $table) {
+            $table->string('status', 25)->change();
+        });
+
+        // Drop the check constraint
+        DB::statement('ALTER TABLE repairs DROP CONSTRAINT IF EXISTS repairs_status_check;');
+
+        // Optionally reset default
+        DB::statement("
+            ALTER TABLE repairs
+            ALTER COLUMN status DROP DEFAULT;
+        ");
     }
 };
