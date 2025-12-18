@@ -19,7 +19,7 @@ php artisan key:generate --force
 
 # 3. Run Database Migrations
 echo "Running database migrations..."
-php artisan migrate:fresh --force
+php artisan migrate:fresh
 
 # 4. Cache configuration
 echo "Rebuilding configuration and routes..."
