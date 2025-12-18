@@ -19,14 +19,14 @@ php artisan key:generate --force
 
 # 3. Run Database Migrations
 echo "Running database migrations..."
-php artisan migrate --force
+php artisan migrate:fresh --force
 
 
 # 4. Cache configuration
-echo "Rebuilding configuration and routes..."
-php artisan config:cache
-php artisan cache:clear
-php artisan route:cache
+# echo "Rebuilding configuration and routes..."
+# php artisan config:cache
+# php artisan cache:clear
+# php artisan route:cache
 
 # 5. Start the main command (Apache)
 exec "$@"
