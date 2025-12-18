@@ -28,6 +28,9 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # Set temporary working directory for file copy
 WORKDIR /usr/src/app
 
+# Add this line to force a cache break if needed
+ARG CACHE_BUST=1
+
 # Copy project files into a source folder
 COPY . .
 
