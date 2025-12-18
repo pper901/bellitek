@@ -1,66 +1,45 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        // 1. Ensure the column exists
-        if (!Schema::hasColumn('repairs', 'status')) {
+        // 1. Ensure the table exists
+        if (!Schema::hasTable('repairs')) {
             return;
         }
 
-        // 2. Change column type first (no constraints here)
+        // 2. Drop the old constraint manually if it exists (Postgres specific)
+        // This prevents the "syntax error at or near check" when changing types
+        if (config('database.default') === 'pgsql') {
+            DB::statement('ALTER TABLE repairs DROP CONSTRAINT IF EXISTS repairs_status_check');
+        }
+
+        // 3. Change the column to a standard string
+        // We remove the 'enum' logic here and just use a standard VARCHAR(255)
         Schema::table('repairs', function (Blueprint $table) {
-            $table->string('status', 255)->nullable()->change();
+            $table->string('status', 255)->default('pending')->change();
         });
-
-        // 3. Drop any existing constraint safely
-        DB::statement("
-            ALTER TABLE repairs
-            DROP CONSTRAINT IF EXISTS repairs_status_check;
-        ");
-
-        // 4. Add new constraint separately
-        DB::statement("
-            ALTER TABLE repairs
-            ADD CONSTRAINT repairs_status_check
-            CHECK (
-                status IN ('pending','received','diagnosing','repairing','completed','ready_for_pickup')
-            );
-        ");
-
-        // 5. Set NOT NULL separately
-        DB::statement("
-            ALTER TABLE repairs
-            ALTER COLUMN status SET NOT NULL;
-        ");
-
-        // 6. Set DEFAULT separately
-        DB::statement("
-            ALTER TABLE repairs
-            ALTER COLUMN status SET DEFAULT 'pending';
-        ");
+        
+        // 4. Ensure no null values exist before setting NOT NULL
+        DB::table('repairs')->whereNull('status')->update(['status' => 'pending']);
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        DB::statement("
-            ALTER TABLE repairs
-            DROP CONSTRAINT IF EXISTS repairs_status_check;
-        ");
-
         Schema::table('repairs', function (Blueprint $table) {
-            $table->string('status', 50)->nullable()->change();
+            $table->string('status', 50)->default('Pending')->change();
         });
-
-        DB::statement("
-            ALTER TABLE repairs
-            ALTER COLUMN status DROP DEFAULT;
-        ");
     }
 };
