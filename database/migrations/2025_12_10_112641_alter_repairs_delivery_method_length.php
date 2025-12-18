@@ -1,39 +1,50 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     * Increase the length of the delivery_method column.
-     */
     public function up(): void
     {
-        // Check if the column exists before trying to modify it
-        if (Schema::hasColumn('repairs', 'delivery_method')) {
-            Schema::table('repairs', function (Blueprint $table) {
-                // Change the string length to 20, which is more than enough for "shipbubble" (10 chars)
-                $table->string('delivery_method', 20)->change();
-            });
-        }
+        // Step 1: Change the column type
+        Schema::table('repairs', function (Blueprint $table) {
+            $table->string('status', 255)->nullable()->change(); // temporarily nullable
+        });
+
+        // Step 2: Drop old check constraint if exists
+        DB::statement('ALTER TABLE repairs DROP CONSTRAINT IF EXISTS repairs_status_check;');
+
+        // Step 3: Add new check constraint
+        DB::statement("
+            ALTER TABLE repairs
+            ADD CONSTRAINT repairs_status_check
+            CHECK (status IN ('pending', 'received', 'diagnosing', 'repairing', 'completed', 'ready_for_pickup'));
+        ");
+
+        // Step 4: Set NOT NULL and default
+        DB::statement("
+            ALTER TABLE repairs
+            ALTER COLUMN status SET NOT NULL,
+            ALTER COLUMN status SET DEFAULT 'pending';
+        ");
     }
 
-    /**
-     * Reverse the migrations.
-     * This will not automatically reverse the column size change safely, 
-     * but we provide a rollback definition for completeness.
-     */
     public function down(): void
     {
-        if (Schema::hasColumn('repairs', 'delivery_method')) {
-            Schema::table('repairs', function (Blueprint $table) {
-                // Revert to a smaller size if needed, but be aware this could fail 
-                // if there is existing data longer than the reverted size.
-                $table->string('delivery_method', 10)->change(); 
-            });
-        }
+        // Step 1: Drop the check constraint
+        DB::statement('ALTER TABLE repairs DROP CONSTRAINT IF EXISTS repairs_status_check;');
+
+        // Step 2: Revert column type
+        Schema::table('repairs', function (Blueprint $table) {
+            $table->string('status', 50)->nullable()->change();
+        });
+
+        // Step 3: Remove default
+        DB::statement("
+            ALTER TABLE repairs
+            ALTER COLUMN status DROP DEFAULT;
+        ");
     }
 };
