@@ -11,15 +11,6 @@ return new class extends Migration {
             $table->string('tracking_code')->unique()->nullable();
             $table->enum('delivery_method', ['dropoff', 'pickup'])->default('dropoff');
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-
-            $table->enum('status', [
-                'pending',
-                'received',
-                'diagnosing',
-                'repairing',
-                'completed',
-                'ready_for_pickup',
-            ])->default('pending')->change();
         });
     }
 
