@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\GuideResource; 
+use App\Models\Review;
 
 class Guide extends Model
 {
@@ -16,4 +17,10 @@ class Guide extends Model
         // Now GuideResource is correctly referenced
         return $this->hasMany(GuideResource::class);
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
 }

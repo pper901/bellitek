@@ -8,6 +8,10 @@
     <title>Bellitek | The Only Tech Store You Need</title>
     {{-- Ensure Alpine.js is loaded via app.js --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if(isset($seo))
+        @include('components.seo', ['seo' => $seo])
+    @endif
+
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
 

@@ -166,6 +166,17 @@ class ProductController extends Controller
             ->with('success','Product updated');
     }
 
+    public function reviews(Product $product) 
+    {
+        $reviews = $product->reviews()->with('user')->latest()->paginate(10);
+        return view('admin.products.reviews', compact('product', 'reviews'));
+    }
+
+    public function destroyReview(Review $review) 
+    {
+        $review->delete();
+        return back()->with('success', 'Review deleted successfully');
+    }
 
     public function deleteImage(ProductImage $image)
     {

@@ -48,11 +48,6 @@ class GuideController extends Controller
         return redirect()->route('admin.guides.index');
     }
 
-    public function show(Guide $guide)
-    {
-        return view('admin.guides.show', compact('guide'));
-    }
-
     public function edit(Guide $guide)
     {
         return view('admin.guides.edit', compact('guide'));
@@ -107,15 +102,56 @@ class GuideController extends Controller
         return view('pages.guides.issues', compact('device', 'category', 'issues'));
     }
 
+     public function show(Guide $guide)
+    {
+        // Optional SEO for admin
+        $seo = [
+            'title'       => $guide->issue . ' Fix Guide',
+            'description' => "Troubleshooting guide for {$guide->device} {$guide->model} {$guide->issue}.",
+            'image'       => asset('storage/guides/fixing.png'), // change when you add images later
+            'url'         => url()->current(),
+            'type'        => 'article'
+        ];
+
+        return view('admin.guides.show', compact('guide','seo'));
+    }
+
+    // PUBLIC guide reading page
     public function showU($device, $category, $issue)
     {
-        $guides = Guide::with('resources')
+        $guides = Guide::with(['resources','reviews.user'])
             ->where('device', $device)
             ->where('category', $category)
             ->where('issue', $issue)
             ->get();
 
-        return view('pages.guides.show', compact('device', 'category', 'issue', 'guides'));
+        // SEO + OG tags for social sharing
+        $seo = [
+            'title'       => "$device - $issue Troubleshooting Guide",
+            'description' => "Learn how to fix $issue on $device under category $category. Includes common causes and solutions.",
+            'image'       => asset('storage/guides/fixing.png'), // change when you have thumbnails
+            'url'         => url()->current(),
+            'type'        => 'article'
+        ];
+
+        return view('pages.guides.show', compact('device', 'category', 'issue', 'guides','seo'));
     }
+
+    public function storeReview(Request $request, Guide $guide)
+    {
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'required|string|max:1000',
+        ]);
+
+        $guide->reviews()->create([
+            'rating'   => $request->rating,
+            'review'   => $request->review,
+            'user_id'  => auth()->id(),
+        ]);
+
+        return back()->with('success', 'Review submitted successfully.');
+    }
+
 
 }

@@ -63,7 +63,10 @@ Route::middleware(['auth', 'is_admin'])
 
             Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
             Route::delete('/images/{image}', [ProductController::class, 'deleteImage'])->name('images.delete');
+
+        Route::get('/{product}/reviews', [ProductController::class, 'reviews'])->name('reviews');
         });
+        Route::delete('reviews/{review}', [ProductController::class, 'destroyReview'])->name('reviews.destroy');
 
         //Accounting Route
         Route::prefix('accounting')->name('accounting.')->group(function () {
@@ -150,6 +153,9 @@ Route::middleware('auth')->prefix('cart')->group(function () {
     Route::get('/checkout/payment/callback', [CheckoutController::class, 'callback'])->name('checkout.callback');
 
     Route::get('/order/{order}/track', [CheckoutController::class, 'track'])->name('orders.track');
+    
+    Route::post('/guides/{guide}/review',[GuideController::class,'storeReview'])
+        ->name('guides.review.store');
 
    
 });
@@ -176,6 +182,9 @@ Route::middleware('auth')->group(function(){
 
     // Tracking
     Route::get('/repair/track/{tracking_code}', [RepairController::class, 'track'])->name('repair.track');
+
+    //Review
+    Route::post('/product/{product}/review', [StoreController::class, 'storeReview'])->name('product.review.store');
 });
 
 
