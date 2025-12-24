@@ -28,7 +28,7 @@
                 </p>
                 <p class="flex items-center text-gray-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.848 5.232a2 2 0 002.304 0L21 8m-2 4v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7m14-5a2 2 0 00-2-2H7a2 2 0 00-2 2h14z" /></svg>
-                    <span class="font-semibold">Email:</span> ✉️ bellitek@gmail.com
+                    <span class="font-semibold">Email:</span> ✉️ rickybastet@gmail.com
                 </p>
             </div>
             
