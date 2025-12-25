@@ -129,15 +129,13 @@ class GuideController extends Controller
             ->where('issue', $issue)
             ->get();
 
+        $guide = $guides->first(); // ✅ ADD THIS
+
         $seo = [
             'title'       => "$device - $issue Troubleshooting Guide",
-            'description' => "Learn how to fix $issue on $device under category $category. Includes common causes and solutions.",
+            'description' => "Learn how to fix $issue on $device under category $category.",
             'image'       => asset('storage/guides/fixing.png'),
-            'url'         => route('guides.show', [
-                'device'   => $device,
-                'category' => $category,
-                'issue'    => $issue,
-            ]),
+            'url'         => route('guides.show', compact('device','category','issue')),
             'type'        => 'article'
         ];
 
@@ -146,9 +144,11 @@ class GuideController extends Controller
             'category',
             'issue',
             'guides',
+            'guide', // ✅ PASS SINGLE GUIDE
             'seo'
         ));
     }
+
 
 
     public function storeReview(Request $request, Guide $guide)
