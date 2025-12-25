@@ -119,23 +119,33 @@ class GuideController extends Controller
     // PUBLIC guide reading page
     public function showU($device, $category, $issue)
     {
-        $guides = Guide::with(['resources','reviews.user'])
+        $guides = Guide::with(['resources', 'reviews.user'])
             ->where('device', $device)
             ->where('category', $category)
             ->where('issue', $issue)
             ->get();
 
-        // SEO + OG tags for social sharing
         $seo = [
             'title'       => "$device - $issue Troubleshooting Guide",
             'description' => "Learn how to fix $issue on $device under category $category. Includes common causes and solutions.",
-            'image'       => asset('storage/guides/fixing.png'), // change when you have thumbnails
-            'url'         => url()->current(),
+            'image'       => asset('storage/guides/fixing.png'),
+            'url'         => route('guides.show', [
+                'device'   => $device,
+                'category' => $category,
+                'issue'    => $issue,
+            ]),
             'type'        => 'article'
         ];
 
-        return view('pages.guides.show', compact('device', 'category', 'issue', 'guides','seo'));
+        return view('pages.guides.show', compact(
+            'device',
+            'category',
+            'issue',
+            'guides',
+            'seo'
+        ));
     }
+
 
     public function storeReview(Request $request, Guide $guide)
     {
