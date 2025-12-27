@@ -72,7 +72,7 @@ class ProductController extends Controller
         unset($data['quantity']);
 
         // Handle slug creation if not provided
-        $data['slug'] = $data['slug'] ?? generateUniqueSlug($data['name'], $product->id ?? null);
+        $data['slug'] = $data['slug'] ?? $this->generateUniqueSlug($data['name'], $product->id ?? null);
         
         // FIX 2: Since the database column is TEXT, we store the raw string input.
         // We still use null coalescing just in case the key is missing from validation result.
@@ -152,7 +152,7 @@ class ProductController extends Controller
             unset($data['quantity']);
 
             // Slug
-            $data['slug'] = $data['slug'] ?? generateUniqueSlug($data['name'], $product->id ?? null);
+            $data['slug'] = $data['slug'] ?? $this->generateUniqueSlug($data['name'], $product->id ?? null);
 
 
             // Update product
