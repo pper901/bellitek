@@ -72,7 +72,7 @@ class ProductController extends Controller
         unset($data['quantity']);
 
         // Handle slug creation if not provided
-        $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+        $data['slug'] = $data['slug'] ?? generateUniqueSlug($data['name'], $product->id ?? null);
         
         // FIX 2: Since the database column is TEXT, we store the raw string input.
         // We still use null coalescing just in case the key is missing from validation result.
@@ -152,7 +152,8 @@ class ProductController extends Controller
             unset($data['quantity']);
 
             // Slug
-            $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+            $data['slug'] = $data['slug'] ?? generateUniqueSlug($data['name'], $product->id ?? null);
+
 
             // Update product
             $product->update($data);
@@ -223,4 +224,21 @@ class ProductController extends Controller
         $product->restore();
         return back()->with('success','Product restored');
     }
+
+    
+    function generateUniqueSlug($name, $productId = null) 
+    {
+        $slug = Str::slug($name);
+        $original = $slug;
+        $counter = 1;
+
+        while (Product::where('slug', $slug)
+            ->when($productId, fn($query) => $query->where('id', '!=', $productId))
+            ->exists()) {
+            $slug = $original . '-' . $counter++;
+        }
+
+        return $slug;
+    }
+
 }
