@@ -215,11 +215,13 @@ Route::post('/uploadcare-test', function (Request $request) {
         // Upload using the uploader() helper
         // getRealPath() is required to point to the temporary file on Render
         $uploadcareFile = $api->uploader()->fromPath($uploadedFile->getRealPath());
+        $uuid = $uploadcareFile->getUuid();
+        $url  = "https://ucarecdn.com/{$uuid}/"; // Public URL anyone can access
 
         return back()
             ->with('success', 'Upload successful!')
-            ->with('uuid', $uploadcareFile->getUuid())
-            ->with('url', $uploadcareFile->cdnUrl());
+            ->with('uuid', $uuid)
+            ->with('url', $url);
 
     } catch (\Exception $e) {
         // This will catch and display the exact error message instead of a 500 page
