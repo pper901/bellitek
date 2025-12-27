@@ -19,7 +19,7 @@ use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
 use Illuminate\Http\Request;
-use Uploadcare\Api;
+// use Uploadcare\Api;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
@@ -199,35 +199,32 @@ Route::get('/uploadcare-test', function () {
 
 // Handle upload
 Route::post('/uploadcare-test', function (Request $request) {
-
     $request->validate([
-        'file' => 'required|file|max:51200', // 50MB
+        'file' => 'required|file|max:10240', // 10MB limit for a safe test
     ]);
 
     try {
         $uploadedFile = $request->file('file');
 
-        // Initialize Uploadcare API
-        $api = new Api(config('services.uploadcare.public'), config('services.uploadcare.secret'));
+        // Use the static 'create' method - it handles the internal configuration for you
+        $api = \Uploadcare\Api::create(
+            config('services.uploadcare.public'), 
+            config('services.uploadcare.secret')
+        );
 
-        // Upload and store immediately
-        $uploadcareFile = $api->uploader->fromPath($uploadedFile->getRealPath(), [
-            'store' => true
-        ]);
-
-        // Get UUID and URL
-        $uuid = $uploadcareFile->getUuid();
-        $url  = $uploadcareFile->getUrl();
+        // Upload using the uploader() helper
+        // getRealPath() is required to point to the temporary file on Render
+        $uploadcareFile = $api->uploader()->fromPath($uploadedFile->getRealPath());
 
         return back()
             ->with('success', 'Upload successful!')
-            ->with('uuid', $uuid)
-            ->with('url', $url);
+            ->with('uuid', $uploadcareFile->getUuid())
+            ->with('url', $uploadcareFile->getUrl());
 
     } catch (\Exception $e) {
+        // This will catch and display the exact error message instead of a 500 page
         return back()->with('error', 'Upload failed: ' . $e->getMessage());
     }
-
 })->name('uploadcare.test.store');
 
 // Debug Uploadcare config
