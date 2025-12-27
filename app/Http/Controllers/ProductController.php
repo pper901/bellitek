@@ -228,20 +228,17 @@ class ProductController extends Controller
     
     private function uploadToUploadcare($file)
     {
-        $response = Http::withBasicAuth(
-            config('services.uploadcare.secret'),
-            ''
-        )->attach(
+        $response = Http::attach(
             'file',
             fopen($file->getRealPath(), 'r'),
             $file->getClientOriginalName()
         )->post('https://upload.uploadcare.com/base/', [
             'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'  => 'auto',
+            'UPLOADCARE_STORE'  => '1', // AUTO STORE
         ]);
 
         if (!$response->successful()) {
-            throw new \Exception('Uploadcare upload failed');
+            throw new \Exception('Uploadcare upload failed: ' . $response->body());
         }
 
         $uuid = $response->json('file');
@@ -251,6 +248,7 @@ class ProductController extends Controller
             'url'  => "https://ucarecdn.com/{$uuid}/",
         ];
     }
+
 
 
 }

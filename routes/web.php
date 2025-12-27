@@ -196,44 +196,39 @@ Route::get('/uploadcare-test', function () {
 
 // Handle upload
 Route::post('/uploadcare-test', function (Request $request) {
-
     $request->validate([
-        'file' => 'required|file|max:51200', // 50MB (supports images & videos)
+        'image' => 'required|image|max:5120',
     ]);
 
     try {
-        $file = $request->file('file');
-
-        $response = Http::withBasicAuth(
-            config('services.uploadcare.secret'),
-            ''
-        )->attach(
+        // 1. Upload
+        $response = Http::attach(
             'file',
-            fopen($file->getRealPath(), 'r'),
-            $file->getClientOriginalName()
+            file_get_contents($request->file('image')->getRealPath()),
+            $request->file('image')->getClientOriginalName()
         )->post('https://upload.uploadcare.com/base/', [
             'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'  => 'auto',
+            'UPLOADCARE_STORE'   => '0', // TEMP upload
         ]);
 
-        if (!$response->successful()) {
-            throw new Exception('Uploadcare upload failed');
-        }
+        $uuid = $response->json()['file'];
 
-        $uuid = $response->json('file');
-        $url  = "https://ucarecdn.com/{$uuid}/";
+        // 2. STORE the file (THIS IS WHAT YOU MISSED)
+        Http::withBasicAuth(
+            config('services.uploadcare.public'),
+            config('services.uploadcare.secret')
+        )->put("https://api.uploadcare.com/files/{$uuid}/storage/");
 
-        return back()
-            ->with('success', 'Upload successful!')
-            ->with('url', $url)
-            ->with('uuid', $uuid);
+        return back()->with([
+            'success' => 'Upload successful!',
+            'uuid'    => $uuid,
+            'url'     => "https://ucarecdn.com/{$uuid}/",
+        ]);
 
     } catch (\Exception $e) {
-        return back()->with('error', 'Upload failed: ' . $e->getMessage());
+        return back()->with('error', $e->getMessage());
     }
-
-})->name('uploadcare.test.store');
-
+});
 
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
