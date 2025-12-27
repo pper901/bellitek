@@ -100,13 +100,13 @@ class ProductController extends Controller
         // Upload images to Cloudinary
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $file) {
-                $upload = Cloudinary::upload($file->getRealPath(), [
-                    'folder' => 'products',
-                    'resource_type' => 'image',
-                ]);
+                $upload = cloudinary()->upload(
+                    $file->getRealPath(),
+                    ['folder' => 'products']
+                );
 
                 ProductImage::create([
-                    'product_id' => $product->id,
+                    'public_id' => $upload->getPublicId(),
                     'path' => $upload->getSecurePath(), // HTTPS CDN URL
                 ]);
             }
@@ -164,11 +164,8 @@ class ProductController extends Controller
                     ->get();
 
                 foreach ($images as $image) {
-                    if ($image->public_id) {
-                        Cloudinary::destroy($image->public_id, [
-                            'invalidate' => true,
-                        ]);
-                    }
+                    
+                cloudinary()->destroy($image->public_id);
                     $image->delete();
                 }
             }
@@ -176,7 +173,7 @@ class ProductController extends Controller
             // Upload new images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
-                    $upload = Cloudinary::upload(
+                    $upload = cloudinary()->upload(
                         $file->getRealPath(),
                         ['folder' => 'products']
                     );
