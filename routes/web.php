@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
 use Illuminate\Http\Request;
+use Uploadcare\Api;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
@@ -197,32 +198,26 @@ Route::get('/uploadcare-test', function () {
 });
 
 // Handle upload
-
 Route::post('/uploadcare-test', function (Request $request) {
 
     $request->validate([
-        'file' => 'required|file|max:51200',
+        'file' => 'required|file|max:51200', // 50MB
     ]);
 
     try {
-        $file = $request->file('file');
+        $uploadedFile = $request->file('file');
 
-        // 1️⃣ Upload (NO AUTH HERE)
-        $response = Http::attach(
-            'file',
-            fopen($file->getRealPath(), 'r'),
-            $file->getClientOriginalName()
-        )->post('https://upload.uploadcare.com/base/', [
-            'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'  => '1', // store immediately
+        // Initialize Uploadcare API
+        $api = new Api(config('services.uploadcare.public'), config('services.uploadcare.secret'));
+
+        // Upload and store immediately
+        $uploadcareFile = $api->uploader->fromPath($uploadedFile->getRealPath(), [
+            'store' => true
         ]);
 
-        if (!$response->successful()) {
-            throw new Exception('Uploadcare upload failed: ' . $response->body());
-        }
-
-        $uuid = $response->json('file');
-        $url  = "https://ucarecdn.com/{$uuid}/";
+        // Get UUID and URL
+        $uuid = $uploadcareFile->getUuid();
+        $url  = $uploadcareFile->getUrl();
 
         return back()
             ->with('success', 'Upload successful!')
@@ -234,7 +229,6 @@ Route::post('/uploadcare-test', function (Request $request) {
     }
 
 })->name('uploadcare.test.store');
-
 
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
