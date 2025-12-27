@@ -62,57 +62,59 @@ class ProductController extends Controller
             'description'     => 'nullable|string',
             'specification'   => 'nullable|string',
             'content'         => 'nullable|string',
-            'slug'            => 'nullable|string|max:255|unique:products,slug',
+            'slug'            => 'nullable|string|max:255',
             'images'          => 'nullable|array',
             'images.*'        => 'image|max:5120',
         ]);
 
-        // FIX 1: Map form field 'quantity' to database field 'stock'
+        // Map quantity → stock
         $data['stock'] = $data['quantity'];
         unset($data['quantity']);
 
-        // Handle slug creation if not provided
-        $data['slug'] = $data['slug'] ?? $this->generateUniqueSlug($data['name']);
-        
-        // FIX 2: Since the database column is TEXT, we store the raw string input.
-        // We still use null coalescing just in case the key is missing from validation result.
+        // Generate unique slug
+        // Generate unique slug whether user typed it or not
+        $data['slug'] = $this->generateUniqueSlug($data['slug'] ?? $data['name']);
+
+
         $specification_data = $data['specification'] ?? null;
 
+        DB::transaction(function () use ($data, $request, &$product) {
+            // Create the product
+            $product = Product::create([
+                'type'           => $data['type'],
+                'category'       => $data['category'],
+                'brand'          => $data['brand'],
+                'name'           => $data['name'],
+                'slug'           => $data['slug'],
+                'condition'      => $data['condition'],
+                'stock'          => $data['stock'],
+                'price'          => $data['price'],
+                'purchase_price' => $data['purchase_price'],
+                'weight'         => $data['weight'],
+                'description'    => $data['description'],
+                'specification'  => $specification_data,
+                'content'        => $data['content'],
+                'status'         => 'available',
+            ]);
 
-        // Ensure all required database fields are present and correctly named.
-        $product = Product::create([
-            'type' => $data['type'],
-            'category' => $data['category'],
-            'brand' => $data['brand'],
-            'name' => $data['name'],
-            'slug' => $data['slug'],
-            'condition' => $data['condition'],
-            'stock' => $data['stock'], // CORRECTED KEY: 'stock' (matches migration)
-            'price' => $data['price'],
-            'purchase_price' => $data['purchase_price'],
-            'weight' => $data['weight'],
-            'description' => $data['description'],
-            'specification' => $specification_data, // Plain string (matches migration TEXT type)
-            'content' => $data['content'],
-            'status' => 'available', // Use 'available' as per your ENUM definition
-        ]);
+            // Upload images to Cloudinary
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $file) {
+                    $upload = cloudinary()->upload(
+                        $file->getRealPath(),
+                        ['folder' => 'products']
+                    );
 
-        // Upload images to Cloudinary
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $file) {
-                $upload = cloudinary()->upload(
-                    $file->getRealPath(),
-                    ['folder' => 'products']
-                );
-
-                ProductImage::create([
-                    'public_id' => $upload->getPublicId(),
-                    'path' => $upload->getSecurePath(), // HTTPS CDN URL
-                ]);
+                    // Associate image with product
+                    $product->images()->create([
+                        'public_id' => $upload->getPublicId(),
+                        'path'      => $upload->getSecurePath(),
+                    ]);
+                }
             }
-        }
+        });
 
-        return redirect()->route('admin.products.index')->with('success','Product created');
+        return redirect()->route('admin.products.index')->with('success', 'Product created successfully');
     }
 
     public function edit(Product $product)
@@ -152,7 +154,8 @@ class ProductController extends Controller
             unset($data['quantity']);
 
             // Slug
-            $data['slug'] = $data['slug'] ?? $this->generateUniqueSlug($data['name'], $product->id ?? null);
+            // Generate unique slug whether user typed it or not
+            $data['slug'] = $this->generateUniqueSlug($data['slug'] ?? $data['name'], $product->id ?? null);
 
 
             // Update product
