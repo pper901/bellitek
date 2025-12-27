@@ -219,7 +219,7 @@ Route::post('/uploadcare-test', function (Request $request) {
         return back()
             ->with('success', 'Upload successful!')
             ->with('uuid', $uploadcareFile->getUuid())
-            ->with('url', $uploadcareFile->getUrl());
+            ->with('url', $uploadcareFile->cdnUrl());
 
     } catch (\Exception $e) {
         // This will catch and display the exact error message instead of a 500 page
