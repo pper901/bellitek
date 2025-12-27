@@ -91,10 +91,6 @@ Route::middleware(['auth', 'is_admin'])
 
     });
 
-Route::get('/debug-cloudinary', function () {
-    dd(config('cloudinary'));
-});
-
 
 Route::get('/dashboard', function () {
     return redirect()->route('home');
@@ -191,5 +187,33 @@ Route::middleware('auth')->group(function(){
 });
 
 
+// Show the upload form
+Route::get('/cloudinary-test', function () {
+    return view('cloudinary-test');
+});
+
+// Handle the test upload
+Route::post('/cloudinary-test', function (Request $request) {
+    $request->validate([
+        'image' => 'required|image|max:2048',
+    ]);
+
+    try {
+        // Upload to Cloudinary using the helper
+        $result = cloudinary()->upload($request->file('image')->getRealPath(), [
+            'folder' => 'testing'
+        ]);
+
+        return back()->with('success', 'Upload Successful!')
+                     ->with('url', $result->getSecurePath());
+                     
+    } catch (\Exception $e) {
+        return back()->with('error', 'Upload Failed: ' . $e->getMessage());
+    }
+})->name('cloudinary.test.store');
 
 
+
+Route::get('/debug-cloudinary', function () {
+    dd(config('cloudinary'));
+});
