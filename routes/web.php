@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\ApiCallController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'is_admin'])
