@@ -50,20 +50,21 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => 'required|string',
-            'category' => 'required|string',
-            'brand' => 'nullable|string',
-            'name' => 'required|string|max:255',
-            'condition' => 'required|string',
-            'quantity' => 'required|integer|min:0', 
-            'price' => 'required|numeric|min:0',
-            'purchase_price' => 'required|numeric|min:0',
-            'weight' => 'required|numeric|min:0.01',
-            'description' => 'nullable|string',
-            'specification' => 'nullable|string', // Database column is singular: 'specification'
-            'content' => 'nullable|string',
-            'slug' => 'nullable|string|max:255|unique:products,slug',
-            'images.*' => 'nullable|image|max:5120',
+            'type'            => 'required|string',
+            'category'        => 'required|string',
+            'brand'           => 'nullable|string',
+            'name'            => 'required|string|max:255',
+            'condition'       => 'required|string',
+            'quantity'        => 'required|integer|min:0',
+            'price'           => 'required|numeric|min:0',
+            'purchase_price'  => 'required|numeric|min:0',
+            'weight'          => 'required|numeric|min:0.01',
+            'description'     => 'nullable|string',
+            'specification'   => 'nullable|string',
+            'content'         => 'nullable|string',
+            'slug'            => 'nullable|string|max:255|unique:products,slug',
+            'images'          => 'nullable|array',
+            'images.*'        => 'image|max:5120',
         ]);
 
         // FIX 1: Map form field 'quantity' to database field 'stock'
