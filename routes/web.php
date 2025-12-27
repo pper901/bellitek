@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'is_admin'])
@@ -189,32 +190,52 @@ Route::middleware('auth')->group(function(){
 
 
 // Show the upload form
-Route::get('/cloudinary-test', function () {
-    return view('cloudinary-test');
+Route::get('/uploadcare-test', function () {
+    return view('uploadcare-test');
 });
 
-// Handle the test upload
-Route::post('/cloudinary-test', function (Request $request) {
+// Handle upload
+Route::post('/uploadcare-test', function (Request $request) {
+
     $request->validate([
-        'image' => 'required|image|max:2048',
+        'file' => 'required|file|max:51200', // 50MB (supports images & videos)
     ]);
 
     try {
-        // Upload to Cloudinary using the helper
-        $result = cloudinary()->upload($request->file('image')->getRealPath(), [
-            'folder' => 'testing'
+        $file = $request->file('file');
+
+        $response = Http::withBasicAuth(
+            config('services.uploadcare.secret'),
+            ''
+        )->attach(
+            'file',
+            fopen($file->getRealPath(), 'r'),
+            $file->getClientOriginalName()
+        )->post('https://upload.uploadcare.com/base/', [
+            'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
+            'UPLOADCARE_STORE'  => 'auto',
         ]);
 
-        return back()->with('success', 'Upload Successful!')
-                     ->with('url', $result->getSecurePath());
-                     
+        if (!$response->successful()) {
+            throw new Exception('Uploadcare upload failed');
+        }
+
+        $uuid = $response->json('file');
+        $url  = "https://ucarecdn.com/{$uuid}/";
+
+        return back()
+            ->with('success', 'Upload successful!')
+            ->with('url', $url)
+            ->with('uuid', $uuid);
+
     } catch (\Exception $e) {
-        return back()->with('error', 'Upload Failed: ' . $e->getMessage());
+        return back()->with('error', 'Upload failed: ' . $e->getMessage());
     }
-})->name('cloudinary.test.store');
+
+})->name('uploadcare.test.store');
 
 
-
-Route::get('/debug-cloudinary', function () {
-    dd(config('cloudinary'));
+// Debug Uploadcare config
+Route::get('/debug-uploadcare', function () {
+    dd(config('services.uploadcare'));
 });
