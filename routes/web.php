@@ -190,45 +190,57 @@ Route::middleware('auth')->group(function(){
 
 
 // Show the upload form
+
+// Show upload form
 Route::get('/uploadcare-test', function () {
     return view('uploadcare-test');
 });
 
 // Handle upload
 Route::post('/uploadcare-test', function (Request $request) {
+
     $request->validate([
-        'image' => 'required|image|max:5120',
+        'file' => 'required|file|max:51200', // 50MB (supports images & videos)
     ]);
 
     try {
-        // 1. Upload
-        $response = Http::attach(
+        $file = $request->file('file');
+
+        $response = Http::withBasicAuth(
+            config('services.uploadcare.secret'),
+            ''
+        )->attach(
             'file',
-            file_get_contents($request->file('image')->getRealPath()),
-            $request->file('image')->getClientOriginalName()
+            fopen($file->getRealPath(), 'r'),
+            $file->getClientOriginalName()
         )->post('https://upload.uploadcare.com/base/', [
             'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'   => '0', // TEMP upload
+            'UPLOADCARE_STORE'  => '0',
         ]);
 
-        $uuid = $response->json()['file'];
+        if (!$response->successful()) {
+            throw new Exception('Uploadcare upload failed');
+        }
 
-        // 2. STORE the file (THIS IS WHAT YOU MISSED)
+        $uuid = $response->json('file');
         Http::withBasicAuth(
             config('services.uploadcare.public'),
             config('services.uploadcare.secret')
         )->put("https://api.uploadcare.com/files/{$uuid}/storage/");
+        
+        $url  = "https://ucarecdn.com/{$uuid}/";
 
-        return back()->with([
-            'success' => 'Upload successful!',
-            'uuid'    => $uuid,
-            'url'     => "https://ucarecdn.com/{$uuid}/",
-        ]);
+        return back()
+            ->with('success', 'Upload successful!')
+            ->with('url', $url)
+            ->with('uuid', $uuid);
 
     } catch (\Exception $e) {
-        return back()->with('error', $e->getMessage());
+        return back()->with('error', 'Upload failed: ' . $e->getMessage());
     }
+
 })->name('uploadcare.test.store');
+
 
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
