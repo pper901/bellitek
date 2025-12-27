@@ -91,6 +91,9 @@ Route::middleware(['auth', 'is_admin'])
 
     });
 
+Route::get('/debug-cloudinary', function () {
+    dd(config('cloudinary'));
+});
 
 
 Route::get('/dashboard', function () {

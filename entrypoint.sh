@@ -28,5 +28,6 @@ php artisan config:cache
 php artisan cache:clear
 php artisan route:cache
 
+
 # 5. Start the main command (Apache)
 exec "$@"
