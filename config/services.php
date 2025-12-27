@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'uploadcare' => [
+        'public' => env('UPLOADCARE_PUBLIC_KEY'),
+        'secret' => env('UPLOADCARE_SECRET_KEY'),
+    ],
+
 ];

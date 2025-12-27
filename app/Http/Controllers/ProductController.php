@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str; 
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class ProductController extends Controller
 {
@@ -99,15 +100,11 @@ class ProductController extends Controller
             // Upload images to Cloudinary
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
-                    $upload = cloudinary()->upload(
-                        $file->getRealPath(),
-                        ['folder' => 'products']
-                    );
+                    $upload = $this->uploadToUploadcare($file);
 
-                    // Associate image with product
                     $product->images()->create([
-                        'public_id' => $upload->getPublicId(),
-                        'path'      => $upload->getSecurePath(),
+                        'public_id' => $upload['uuid'],
+                        'path' => $upload['url'],
                     ]);
                 }
             }
@@ -167,8 +164,12 @@ class ProductController extends Controller
                     ->get();
 
                 foreach ($images as $image) {
-                    
-                cloudinary()->destroy($image->public_id);
+                    Http::withBasicAuth(
+                        config('services.uploadcare.secret'),
+                        ''
+                    )->delete(
+                        "https://api.uploadcare.com/files/{$image->uuid}/"
+                    );
                     $image->delete();
                 }
             }
@@ -176,14 +177,11 @@ class ProductController extends Controller
             // Upload new images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
-                    $upload = cloudinary()->upload(
-                        $file->getRealPath(),
-                        ['folder' => 'products']
-                    );
+                    $upload = $this->uploadToUploadcare($file);
 
                     $product->images()->create([
-                        'path'      => $upload->getSecurePath(),
-                        'public_id' => $upload->getPublicId(),
+                        'public_id' => $upload['uuid'],
+                        'path' => $upload['url'],
                     ]);
                 }
             }
@@ -228,14 +226,30 @@ class ProductController extends Controller
     }
 
     
-    function generateUniqueSlug($value, $productId = null)
+    private function uploadToUploadcare($file)
     {
-        $slug = Str::slug($value);
+        $response = Http::withBasicAuth(
+            config('services.uploadcare.secret'),
+            ''
+        )->attach(
+            'file',
+            fopen($file->getRealPath(), 'r'),
+            $file->getClientOriginalName()
+        )->post('https://upload.uploadcare.com/base/', [
+            'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
+            'UPLOADCARE_STORE'  => 'auto',
+        ]);
 
-        // Always append a small random string or timestamp
-        $slug .= '-' . time(); // OR Str::random(4) for shorter string
+        if (!$response->successful()) {
+            throw new \Exception('Uploadcare upload failed');
+        }
 
-        return $slug;
+        $uuid = $response->json('file');
+
+        return [
+            'uuid' => $uuid,
+            'url'  => "https://ucarecdn.com/{$uuid}/",
+        ];
     }
 
 
