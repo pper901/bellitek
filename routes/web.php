@@ -197,43 +197,37 @@ Route::get('/uploadcare-test', function () {
 });
 
 // Handle upload
+
 Route::post('/uploadcare-test', function (Request $request) {
 
     $request->validate([
-        'file' => 'required|file|max:51200', // 50MB (supports images & videos)
+        'file' => 'required|file|max:51200',
     ]);
 
     try {
         $file = $request->file('file');
 
-        $response = Http::withBasicAuth(
-            config('services.uploadcare.secret'),
-            ''
-        )->attach(
+        // 1️⃣ Upload (NO AUTH HERE)
+        $response = Http::attach(
             'file',
             fopen($file->getRealPath(), 'r'),
             $file->getClientOriginalName()
         )->post('https://upload.uploadcare.com/base/', [
             'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'  => '0',
+            'UPLOADCARE_STORE'  => '1', // store immediately
         ]);
 
         if (!$response->successful()) {
-            throw new Exception('Uploadcare upload failed');
+            throw new Exception('Uploadcare upload failed: ' . $response->body());
         }
 
         $uuid = $response->json('file');
-        Http::withBasicAuth(
-            config('services.uploadcare.public'),
-            config('services.uploadcare.secret')
-        )->put("https://api.uploadcare.com/files/{$uuid}/storage/");
-        
         $url  = "https://ucarecdn.com/{$uuid}/";
 
         return back()
             ->with('success', 'Upload successful!')
-            ->with('url', $url)
-            ->with('uuid', $uuid);
+            ->with('uuid', $uuid)
+            ->with('url', $url);
 
     } catch (\Exception $e) {
         return back()->with('error', 'Upload failed: ' . $e->getMessage());
