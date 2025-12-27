@@ -71,7 +71,6 @@ class ProductController extends Controller
         $data['stock'] = $data['quantity'];
         unset($data['quantity']);
 
-        // Generate unique slug
         // Generate unique slug whether user typed it or not
         $data['slug'] = $this->generateUniqueSlug($data['slug'] ?? $data['name']);
 
@@ -229,19 +228,15 @@ class ProductController extends Controller
     }
 
     
-    function generateUniqueSlug($name, $productId = null) 
+    function generateUniqueSlug($value, $productId = null)
     {
-        $slug = Str::slug($name);
-        $original = $slug;
-        $counter = 1;
+        $slug = Str::slug($value);
 
-        while (Product::where('slug', $slug)
-            ->when($productId, fn($query) => $query->where('id', '!=', $productId))
-            ->exists()) {
-            $slug = $original . '-' . $counter++;
-        }
+        // Always append a small random string or timestamp
+        $slug .= '-' . time(); // OR Str::random(4) for shorter string
 
         return $slug;
     }
+
 
 }
