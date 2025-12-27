@@ -6,7 +6,7 @@ return [
     | Cloudinary Cloud URL
     |--------------------------------------------------------------------------
     */
-    'cloud_url' => env('CLOUDINARY_URL', ''), // Required, empty string as fallback
+    'cloud_url' => env('CLOUDINARY_URL'), // Required, empty string as fallback
 
     /*
     |--------------------------------------------------------------------------
@@ -14,7 +14,7 @@ return [
     |--------------------------------------------------------------------------
     | Default to empty string to avoid null array offset errors
     */
-    'upload_preset' => env('CLOUDINARY_UPLOAD_PRESET', ''),
+    'upload_preset' => env('CLOUDINARY_UPLOAD_PRESET', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -22,7 +22,7 @@ return [
     |--------------------------------------------------------------------------
     | Default to empty string
     */
-    'notification_url' => env('CLOUDINARY_NOTIFICATION_URL', ''),
+    'notification_url' => env('CLOUDINARY_NOTIFICATION_URL', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -30,6 +30,6 @@ return [
     |--------------------------------------------------------------------------
     | Default to empty string
     */
-    'upload_route' => env('CLOUDINARY_UPLOAD_ROUTE', ''),
-    'upload_action' => env('CLOUDINARY_UPLOAD_ACTION', ''),
+    'upload_route' => env('CLOUDINARY_UPLOAD_ROUTE', null),
+    'upload_action' => env('CLOUDINARY_UPLOAD_ACTION', null),
 ];
