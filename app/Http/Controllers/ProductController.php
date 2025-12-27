@@ -78,7 +78,7 @@ class ProductController extends Controller
 
         $specification_data = $data['specification'] ?? null;
 
-        DB::transaction(function () use ($data, $request, &$product) {
+        DB::transaction(function () use ($data, $request, &$product, $specification_data) {
             // Create the product
             $product = Product::create([
                 'type'           => $data['type'],
