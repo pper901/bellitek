@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str; 
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -133,6 +134,7 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'specification' => 'nullable|string',
             'content' => 'nullable|string',
+            'status' => 'required|in:available,in_cart,sold',
             'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
 
             'images' => 'nullable|array',
@@ -142,58 +144,49 @@ class ProductController extends Controller
             'remove_images.*' => 'integer|exists:product_images,id',
         ]);
 
-        /* -----------------------------
-            Quantity → Stock
-        ------------------------------*/
-        $data['stock'] = $data['quantity'];
-        unset($data['quantity']);
+        DB::transaction(function () use ($request, $product, $data) {
 
-        /* -----------------------------
-            Auto slug
-        ------------------------------*/
-        $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+            // Quantity → Stock
+            $data['stock'] = $data['quantity'];
+            unset($data['quantity']);
 
-        /* -----------------------------
-            Update Product
-        ------------------------------*/
-        $product->update($data);
+            // Slug
+            $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
 
-        /* -----------------------------
-            Remove Images (Cloudinary)
-        ------------------------------*/
-        if ($request->filled('remove_images')) {
-            $images = $product->images()
-                ->whereIn('id', $request->remove_images)
-                ->get();
+            // Update product
+            $product->update($data);
 
-            foreach ($images as $image) {
-                if ($image->public_id) {
-                    Cloudinary::destroy($image->public_id);
+            // Delete images
+            if ($request->filled('remove_images')) {
+                $images = $product->images()
+                    ->whereIn('id', $request->remove_images)
+                    ->get();
+
+                foreach ($images as $image) {
+                    if ($image->public_id) {
+                        Cloudinary::destroy($image->public_id, [
+                            'invalidate' => true,
+                        ]);
+                    }
+                    $image->delete();
                 }
-                $image->delete();
             }
-        }
 
-        /* -----------------------------
-            Upload New Images (Cloudinary)
-        ------------------------------*/
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $file) {
+            // Upload new images
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $file) {
+                    $upload = Cloudinary::upload(
+                        $file->getRealPath(),
+                        ['folder' => 'products']
+                    );
 
-                $upload = Cloudinary::upload(
-                    $file->getRealPath(),
-                    [
-                        'folder' => 'products',
-                        'resource_type' => 'image',
-                    ]
-                );
-
-                $product->images()->create([
-                    'path'      => $upload->getSecurePath(),
-                    'public_id' => $upload->getPublicId(),
-                ]);
+                    $product->images()->create([
+                        'path'      => $upload->getSecurePath(),
+                        'public_id' => $upload->getPublicId(),
+                    ]);
+                }
             }
-        }
+        });
 
         return redirect()
             ->route('admin.products.index')
