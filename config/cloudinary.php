@@ -33,7 +33,7 @@ return [
     'upload_route' => env('CLOUDINARY_UPLOAD_ROUTE', null),
     'upload_action' => env('CLOUDINARY_UPLOAD_ACTION', null),
 
-    'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
-    'api_key'    => env('CLOUDINARY_API_KEY'),
-    'api_secret' => env('CLOUDINARY_API_SECRET'),
+    'cloud_name' => env('CLOUDINARY_CLOUD_NAME','durrjejwp'),
+    'api_key'    => env('CLOUDINARY_API_KEY','788679216488928'),
+    'api_secret' => env('CLOUDINARY_API_SECRET','QTzgORhisAKmzRFiWLZrWnvSv24'),
 ];
