@@ -43,7 +43,7 @@
             <div class="relative w-full h-48 bg-gray-100 overflow-hidden rounded-t-xl">
                 @php
                     $imagePath = optional($product->images->first())->path;
-                    $imageUrl = $imagePath ? asset('storage/'.$imagePath) : 'https://placehold.co/400x300/f3f4f6/333333?text=No+Image';
+                    $imageUrl = $imagePath : 'https://placehold.co/400x300/f3f4f6/333333?text=No+Image';
                 @endphp
 
                 <img src="{{ $imageUrl }}"

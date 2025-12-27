@@ -29,7 +29,7 @@
                 <div class="w-full h-[400px] sm:h-[500px] overflow-hidden rounded-xl shadow-lg mb-4 bg-gray-100 flex items-center justify-center">
                     @php
                         $mainImagePath = optional($product->images->first())->path ?? 'placeholders/default-product.png';
-                        $mainImageUrl = asset('storage/' . $mainImagePath);
+                        $mainImageUrl = $mainImagePath;
                     @endphp
                     <img id="main-image" 
                          src="{{ $mainImageUrl }}"
@@ -40,7 +40,7 @@
 
                 <div class="flex space-x-3 overflow-x-auto pb-2 px-1">
                     @forelse($product->images as $image)
-                        <img src="{{ asset('storage/'.$image->path) }}"
+                        <img src="{{ $image->path }}"
                              alt="Thumbnail"
                              class="thumbnail w-24 h-24 object-cover rounded-lg border-2 border-transparent cursor-pointer hover:border-blue-600 transition flex-shrink-0"
                              onclick="document.getElementById('main-image').src=this.src; 

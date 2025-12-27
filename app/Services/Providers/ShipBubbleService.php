@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class ShipbubbleService
+class ShipBubbleService
 {
     public const SHIPBUBBLE_IDENTIFIER = 'Shipbubble';
 

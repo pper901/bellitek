@@ -45,7 +45,7 @@
         <div class="grid grid-cols-3 gap-4 mb-4">
             @foreach($product->images as $image)
                 <div class="relative p-1 border rounded">
-                    <img src="{{ asset('storage/' . $image->path) }}" class="w-full h-32 object-cover rounded">
+                    <img src="{{ $image->path }}" class="w-full h-32 object-cover rounded">
 
                     <label class="absolute top-1 left-1 bg-white p-1 rounded shadow text-xs">
                         <input type="checkbox" name="remove_images[]" value="{{ $image->id }}">

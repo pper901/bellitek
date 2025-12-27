@@ -89,7 +89,7 @@
                             // Use 'path' or 'image_path' based on your ProductImage model. 
                             // We'll stick to 'path' for consistency with previous fixes.
                             $imagePath = $product->images->first()->path ?? 'placeholders/default-product.png';
-                            $imageUrl = asset('storage/' . $imagePath);
+                            $imageUrl = $imagePath;
                         @endphp
                         <img src="{{ $imageUrl }}"
                              onerror="this.onerror=null; this.src='https://placehold.co/600x400/eeeeee/333333?text=No+Image';"

@@ -95,7 +95,7 @@
                 @php
                     // Check for the first image path, use a placeholder if not found
                     $imagePath = optional($product->images->first())->path ?? 'placeholders/default-product.png';
-                    $imageUrl = asset('storage/' . $imagePath);
+                    $imageUrl = $imagePath;
                 @endphp
                 <img src="{{ $imageUrl }}"
                      onerror="this.onerror=null; this.src='https://placehold.co/600x400/eeeeee/333333?text=No+Image';"

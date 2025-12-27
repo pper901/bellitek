@@ -8,6 +8,7 @@ use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str; 
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ProductController extends Controller
 {
@@ -94,11 +95,18 @@ class ProductController extends Controller
             'status' => 'available', // Use 'available' as per your ENUM definition
         ]);
 
-
+        // Upload images to Cloudinary
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $file) {
-                $path = $file->store('products', 'public');
-                ProductImage::create(['product_id' => $product->id, 'path' => $path]);
+                $upload = Cloudinary::upload($file->getRealPath(), [
+                    'folder' => 'products',
+                    'resource_type' => 'image',
+                ]);
+
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'path' => $upload->getSecurePath(), // HTTPS CDN URL
+                ]);
             }
         }
 
@@ -126,6 +134,7 @@ class ProductController extends Controller
             'specification' => 'nullable|string',
             'content' => 'nullable|string',
             'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+
             'images' => 'nullable|array',
             'images.*' => 'image|max:5120',
 
@@ -133,37 +142,62 @@ class ProductController extends Controller
             'remove_images.*' => 'integer|exists:product_images,id',
         ]);
 
-        // Map quantity → stock
+        /* -----------------------------
+            Quantity → Stock
+        ------------------------------*/
         $data['stock'] = $data['quantity'];
         unset($data['quantity']);
 
-        // Auto slug if missing
+        /* -----------------------------
+            Auto slug
+        ------------------------------*/
         $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
 
-        // Update product
+        /* -----------------------------
+            Update Product
+        ------------------------------*/
         $product->update($data);
 
-        // Remove selected old images
-        if ($request->remove_images) {
-            foreach ($request->remove_images as $imageId) {
-                $img = $product->images()->find($imageId);
-                Storage::disk('public')->delete($img->path);
-                $img->delete();
+        /* -----------------------------
+            Remove Images (Cloudinary)
+        ------------------------------*/
+        if ($request->filled('remove_images')) {
+            $images = $product->images()
+                ->whereIn('id', $request->remove_images)
+                ->get();
+
+            foreach ($images as $image) {
+                if ($image->public_id) {
+                    Cloudinary::destroy($image->public_id);
+                }
+                $image->delete();
             }
         }
 
-        // Add new images
+        /* -----------------------------
+            Upload New Images (Cloudinary)
+        ------------------------------*/
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $file) {
-                $path = $file->store('products', 'public');
+
+                $upload = Cloudinary::upload(
+                    $file->getRealPath(),
+                    [
+                        'folder' => 'products',
+                        'resource_type' => 'image',
+                    ]
+                );
+
                 $product->images()->create([
-                    'path' => $path,
+                    'path'      => $upload->getSecurePath(),
+                    'public_id' => $upload->getPublicId(),
                 ]);
             }
         }
 
-        return redirect()->route('admin.products.index')
-            ->with('success','Product updated');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', 'Product updated successfully');
     }
 
     public function reviews(Product $product) 

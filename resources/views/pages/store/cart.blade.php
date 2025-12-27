@@ -30,7 +30,7 @@
                     <a href="{{ route('store.product', $item->product->id) }}" class="flex-shrink-0">
                         @php
                             $imagePath = optional($item->product->images->first())->path;
-                            $imageUrl = $imagePath ? asset('storage/'.$imagePath) : 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
+                            $imageUrl = $imagePath ? $imagePath : 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
                         @endphp
                         <img src="{{ $imageUrl }}" 
                              onerror="this.onerror=null; this.src='https://placehold.co/100x100/f3f4f6/333333?text=Item';"
