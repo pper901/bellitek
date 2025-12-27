@@ -228,7 +228,7 @@ Route::post('/uploadcare-test', function (Request $request) {
     } catch (\Exception $e) {
         return back()->with('error', $e->getMessage());
     }
-});
+})->name('uploadcare.test.store');
 
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
