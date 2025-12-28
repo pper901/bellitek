@@ -124,10 +124,14 @@ class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
 
                     {{-- Share Button --}}
                     <button type="button" 
-                            onclick="openShareModal('{{ $product->name }}', '{{ url('/products/' . $product->id) }}')"
-                            class="text-orange-600 hover:text-orange-900 font-medium text-sm">
-                        Share
-                    </button>
+                        onclick="openShareModal(
+                            '{{ addslashes($product->name) }}', 
+                            '{{ url('store/products/' . $product->id) }}', 
+                            '{{ $product->images->first() ? $product->images->first()->path : '' }}'
+                        )"
+                        class="text-orange-600 hover:text-orange-900 font-medium text-sm">
+                    Share
+                </button>
 
                     @if (!$product->deleted_at)
                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Delete this product?')">
