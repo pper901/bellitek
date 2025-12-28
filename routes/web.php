@@ -200,25 +200,33 @@ Route::get('/uploadcare-test', function () {
 // Handle upload
 Route::post('/uploadcare-test', function (Request $request) {
     $request->validate([
-        'file' => 'required|file|max:10240', // 10MB limit for a safe test
+        'file' => 'required|file|max:10240',
     ]);
 
     try {
         $uploadedFile = $request->file('file');
 
-        // Use the static 'create' method - it handles the internal configuration for you
         $api = \Uploadcare\Api::create(
             config('services.uploadcare.public'), 
             config('services.uploadcare.secret')
         );
 
-        // Upload using the uploader() helper
-        // getRealPath() is required to point to the temporary file on Render
-        $uploadcareFile = $api->uploader()->fromPath($uploadedFile->getRealPath());
+        // We use fromContent to give us more control over the filename and metadata
+        // Argument 1: File binary content
+        // Argument 2: Original Filename
+        // Argument 3: MIME Type (null lets the SDK auto-detect)
+        $uploadcareFile = $api->uploader()->fromContent(
+            file_get_contents($uploadedFile->getRealPath()),
+            $uploadedFile->getClientOriginalName(),
+            $uploadedFile->getMimeType()
+        );
+
+        // Important: Explicitly store it so it's not a temporary 404
+        $uploadcareFile->store();
+        $filename = $uploadedFile->getClientOriginalName();
+
         $uuid = $uploadcareFile->getUuid();
-        // Explicitly store the file
-        $api->files()->store($uuid);
-        $url  = "https://ucarecdn.com/{$uuid}/"; // Public URL anyone can access
+        $url = "https://5to6o2z4j5.ucarecd.net/{$uuid}/-/preview/200x200/";
 
         return back()
             ->with('success', 'Upload successful!')
@@ -226,11 +234,9 @@ Route::post('/uploadcare-test', function (Request $request) {
             ->with('url', $url);
 
     } catch (\Exception $e) {
-        // This will catch and display the exact error message instead of a 500 page
         return back()->with('error', 'Upload failed: ' . $e->getMessage());
     }
 })->name('uploadcare.test.store');
-
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
     dd(config('services.uploadcare'));

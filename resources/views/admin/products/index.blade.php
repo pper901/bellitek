@@ -56,7 +56,7 @@ class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
 
             <td class="p-3">
                 @if ($product->images->first())
-                    <img src="{{ asset('storage/' . $product->images->first()->path) }}"
+                    <img src="{{ $product->images->first()->path }}"
                          class="w-12 h-12 object-cover rounded shadow-sm border">
                 @else
                     <div class="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">No Img</div>

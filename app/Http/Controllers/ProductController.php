@@ -100,11 +100,12 @@ class ProductController extends Controller
             // Upload images to Cloudinary
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
+                    // Calls the updated helper with the .net domain
                     $upload = $this->uploadToUploadcare($file);
 
                     $product->images()->create([
                         'public_id' => $upload['uuid'],
-                        'path' => $upload['url'],
+                        'path'      => $upload['url'],
                     ]);
                 }
             }
@@ -144,53 +145,46 @@ class ProductController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $product, $data) {
+                $data['stock'] = $data['quantity'];
+                unset($data['quantity']);
+                $data['slug'] = $this->generateUniqueSlug($data['slug'] ?? $data['name'], $product->id);
 
-            // Quantity → Stock
-            $data['stock'] = $data['quantity'];
-            unset($data['quantity']);
+                $product->update($data);
 
-            // Slug
-            // Generate unique slug whether user typed it or not
-            $data['slug'] = $this->generateUniqueSlug($data['slug'] ?? $data['name'], $product->id ?? null);
-
-
-            // Update product
-            $product->update($data);
-
-            // Delete images
-            if ($request->filled('remove_images')) {
-                $images = $product->images()
-                    ->whereIn('id', $request->remove_images)
-                    ->get();
-
-                foreach ($images as $image) {
-                    Http::withBasicAuth(
-                        config('services.uploadcare.secret'),
-                        ''
-                    )->delete(
-                        "https://api.uploadcare.com/files/{$image->uuid}/"
+                // --- NEW SDK DELETION LOGIC ---
+                if ($request->filled('remove_images')) {
+                    $api = \Uploadcare\Api::create(
+                        config('services.uploadcare.public'), 
+                        config('services.uploadcare.secret')
                     );
-                    $image->delete();
+
+                    $images = $product->images()->whereIn('id', $request->remove_images)->get();
+
+                    foreach ($images as $image) {
+                        try {
+                            // Delete from Uploadcare servers using the stored public_id (UUID)
+                            $api->file()->file($image->public_id)->delete();
+                        } catch (\Exception $e) {
+                            \Log::error("Uploadcare deletion failed: " . $e->getMessage());
+                        }
+                        $image->delete();
+                    }
                 }
-            }
 
-            // Upload new images
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $file) {
-                    $upload = $this->uploadToUploadcare($file);
-
-                    $product->images()->create([
-                        'public_id' => $upload['uuid'],
-                        'path' => $upload['url'],
-                    ]);
+                // --- NEW UPLOADCARE UPLOAD LOGIC ---
+                if ($request->hasFile('images')) {
+                    foreach ($request->file('images') as $file) {
+                        $upload = $this->uploadToUploadcare($file);
+                        $product->images()->create([
+                            'public_id' => $upload['uuid'],
+                            'path'      => $upload['url'],
+                        ]);
+                    }
                 }
-            }
-        });
+            });
 
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', 'Product updated successfully');
-    }
+            return redirect()->route('admin.products.index')->with('success', 'Product updated successfully');
+        }
 
     public function reviews(Product $product) 
     {
@@ -228,27 +222,61 @@ class ProductController extends Controller
     
     private function uploadToUploadcare($file)
     {
-        $response = Http::attach(
-            'file',
-            fopen($file->getRealPath(), 'r'),
-            $file->getClientOriginalName()
-        )->post('https://upload.uploadcare.com/base/', [
-            'UPLOADCARE_PUB_KEY' => config('services.uploadcare.public'),
-            'UPLOADCARE_STORE'  => '1', // AUTO STORE
-        ]);
+        $api = \Uploadcare\Api::create(
+            config('services.uploadcare.public'), 
+            config('services.uploadcare.secret')
+        );
 
-        if (!$response->successful()) {
-            throw new \Exception('Uploadcare upload failed: ' . $response->body());
-        }
+        // Use fromContent to bypass argument type errors
+        $uploadcareFile = $api->uploader()->fromContent(
+            file_get_contents($file->getRealPath()),
+            $file->getClientOriginalName(),
+            $file->getMimeType()
+        );
 
-        $uuid = $response->json('file');
+        // Explicitly store to avoid 404s
+        $uploadcareFile->store();
+
+        $uuid = $uploadcareFile->getUuid();
+
+        // Use your specific account domain and the preview transformation
+        $url = "https://5to6o2z4j5.ucarecd.net/{$uuid}/-/preview/500x500/";
 
         return [
             'uuid' => $uuid,
-            'url'  => "https://ucarecdn.com/{$uuid}/",
+            'url'  => $url,
         ];
     }
 
+    /**
+     * Generates a unique slug for a product.
+     *
+     * @param string $name
+     * @param int|null $currentId (Optional) Used to ignore the current product during update
+     * @return string
+     */
+    private function generateUniqueSlug($name, $currentId = null)
+    {
+        // 1. Create the base slug from the name
+        $slug = Str::slug($name);
+        $originalSlug = $slug;
+        $count = 1;
+
+        // 2. Check if the slug already exists in the database
+        // If it's an update, we ignore the record with the $currentId
+        while (\App\Models\Product::where('slug', $slug)
+                ->when($currentId, function ($query, $currentId) {
+                    return $query->where('id', '!=', $currentId);
+                })
+                ->exists()) 
+        {
+            // 3. If it exists, append a number and check again
+            $slug = $originalSlug . '-' . $count;
+            $count++;
+        }
+
+        return $slug;
+    }
 
 
 }
