@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -261,6 +262,7 @@ class ProductController extends Controller
         $slug = Str::slug($name);
         $originalSlug = $slug;
         $count = 1;
+        Log::info("Generating slug for: $name. Base slug: $slug");
 
         // 2. Check if the slug already exists in the database
         // If it's an update, we ignore the record with the $currentId
