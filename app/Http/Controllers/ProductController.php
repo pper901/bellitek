@@ -135,7 +135,7 @@ class ProductController extends Controller
             'specification' => 'nullable|string',
             'content' => 'nullable|string',
             'status' => 'required|in:available,in_cart,sold',
-            'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'nullable|string|max:255' . $product->id,
 
             'images' => 'nullable|array',
             'images.*' => 'image|max:5120',
@@ -264,11 +264,12 @@ class ProductController extends Controller
 
         // 2. Check if the slug already exists in the database
         // If it's an update, we ignore the record with the $currentId
-        while (\App\Models\Product::where('slug', $slug)
-                ->when($currentId, function ($query, $currentId) {
-                    return $query->where('id', '!=', $currentId);
-                })
-                ->exists()) 
+        while (DB::table('products') // Query the table directly to be safe
+            ->where('slug', $slug)
+            ->when($currentId, function ($query, $currentId) {
+                return $query->where('id', '!=', $currentId);
+            })
+            ->exists()) 
         {
             // 3. If it exists, append a number and check again
             $slug = $originalSlug . '-' . $count;
