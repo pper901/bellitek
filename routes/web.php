@@ -216,6 +216,8 @@ Route::post('/uploadcare-test', function (Request $request) {
         // getRealPath() is required to point to the temporary file on Render
         $uploadcareFile = $api->uploader()->fromPath($uploadedFile->getRealPath());
         $uuid = $uploadcareFile->getUuid();
+        // Explicitly store the file
+        $api->files()->store($uuid);
         $url  = "https://ucarecdn.com/{$uuid}/"; // Public URL anyone can access
 
         return back()
