@@ -47,7 +47,7 @@ class WarehouseController extends Controller
         if (!$this->shipbubbleProviderId) {
             return view('admin.warehouse.index', [
                 'addresses' => [],
-                'current' => WarehouseSetting::where('user_id', Auth::id())->first(),
+                'current' => WarehouseSetting::where('id', Auth::id())->first(),
             ])->withErrors('Shipbubble API provider is not configured in the database.');
         }
 
@@ -72,7 +72,7 @@ class WarehouseController extends Controller
         }
 
         $addresses = $addressesResponse->json('data') ?? [];
-        $current = WarehouseSetting::where('user_id', Auth::id())->first();
+        $current = WarehouseSetting::where('id', Auth::id())->first();
 
         return view('admin.warehouse.index', compact('addresses', 'current'));
     }
@@ -99,7 +99,7 @@ class WarehouseController extends Controller
      */
     public function create()
     {
-        $current = WarehouseSetting::where('user_id', Auth::id())->first(); // current warehouse address if exists
+        $current = WarehouseSetting::where('id', Auth::id())->first(); // current warehouse address if exists
         return view('admin.warehouse.create', compact('current'));
     }
 
@@ -162,7 +162,7 @@ class WarehouseController extends Controller
         $formattedAddress = $data['formatted_address'] ?? $request->address;
 
         // Save to DB
-        $warehouse = WarehouseSetting::where('user_id', Auth::id())->first();;
+        $warehouse = WarehouseSetting::where('id', Auth::id())->first();;
         $warehouse->name = $request->name;
         $warehouse->email = $request->email;
         $warehouse->phone = $request->phone;
