@@ -34,17 +34,28 @@ class CheckoutController extends Controller
     public function saveAddress(Request $request)
     {
         $request->validate([
-            'street'       => 'required',
-            'city'         => 'required',
-            'state'        => 'required',
-            'postal_code'  => 'required',
-            'country'      => 'required',
-            'phonenumber'  => 'required|string|min:10',
+            'street'      => 'required|string|max:255',
+            'city'        => 'required|string|max:100',
+            'state'       => 'required|string|max:100',
+            'postal_code' => 'nullable|string|max:20', // Changed to nullable as per your form placeholder
+            'country'     => 'required|string|max:100',
+            'phonenumber' => 'required|string|min:10',
         ]);
 
-        $address = Auth::user()->addresses()->create($request->all());
+        // Create the address for the authenticated user
+        $address = Auth::user()->addresses()->create([
+            'street'       => $request->street,
+            'city'         => $request->city,
+            'state'        => $request->state,
+            'postal_code'  => $request->postal_code ?? '000000', // Default if empty
+            'country'      => $request->country,
+            'phonenumber'  => $request->phonenumber,
+            'address_code' => null, // Ensure this is null so summary() triggers ShipBubble validation
+        ]);
 
-        return redirect()->route('checkout.summary', ['address' => $address->id]);
+        // Redirect to summary page with the newly created address ID
+        return redirect()->route('checkout.summary', ['address' => $address->id])
+                        ->with('success', 'Address saved successfully!');
     }
 
     /**
