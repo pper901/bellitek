@@ -16,8 +16,8 @@
 {{-- ---------------------------------------------------------------------------------------------------------------- --}}
 
 @php
-    // Pre-calculate the final URL using Blade syntax
-    $summaryUrl = route('checkout.summary', ['address' => $address->id]);
+    // Only generate the URL if the address exists
+    $summaryUrl = $address ? route('checkout.summary', ['address' => $address->id]) : '#';
 @endphp
 <div x-data="{ loading: false }">
 
