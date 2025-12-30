@@ -52,7 +52,7 @@ class WarehouseController extends Controller
         }
 
         $addressesResponse = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('SHIPBUBBLE_API_KEY'),
+            'Authorization' => 'Bearer ' . config('services.shipbubble.key'),
             'Content-Type' => 'application/json',
         ])->get('https://api.shipbubble.com/v1/shipping/address');
 
@@ -135,7 +135,7 @@ class WarehouseController extends Controller
 
         // Call ShipBubble address validation endpoint
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('SHIPBUBBLE_API_KEY'),
+            'Authorization' => 'Bearer ' . config('services.shipbubble.key'),
             'Content-Type' => 'application/json',
         ])->post('https://api.shipbubble.com/v1/shipping/address/validate', $payload);
 

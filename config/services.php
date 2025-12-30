@@ -39,5 +39,13 @@ return [
         'public' => env('UPLOADCARE_PUBLIC_KEY'),
         'secret' => env('UPLOADCARE_SECRET_KEY'),
     ],
+    // ...
+    'shipbubble' => [
+        'key' => env('SHIPBUBBLE_API_KEY'),
+    ],
+    // ...
+    'paystack' => [
+        'key' => env('PAYSTACK_SECRET'),
+    ],
 
 ];
