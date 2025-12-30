@@ -22,34 +22,32 @@ class CartController extends Controller
     public function add(Request $request, $productId)
     {
         $product = Product::findOrFail($productId);
+        $quantity = max(1, (int) $request->input('qty', 1));
+        $userId = auth()->id();
 
-        // Requested quantity (default 1)
-        $quantity = $request->input('qty', 1);
+        // 1. Find if this product is already in the DB cart for this user
+        $cartItem = CartItem::where('user_id', $userId)
+                            ->where('product_id', $productId)
+                            ->first();
 
-        // Check stock
-        if ($quantity > $product->stock) {
-            return back()->with('error', 'You cannot add more than the available stock.');
+        $currentQty = $cartItem ? $cartItem->qty : 0;
+        $newQty = $currentQty + $quantity;
+
+        // 2. Stock Check
+        if ($newQty > $product->stock) {
+            return back()->with('error', "Only $product->stock units available.");
         }
 
-        // If product exists in cart, check combined quantity
-        $cart = session()->get('cart', []);
-
-        if (isset($cart[$productId])) {
-            $newQty = $cart[$productId]['quantity'] + $quantity;
-            if ($newQty > $product->stock) {
-                return back()->with('error', 'Only ' . $product->stock . ' units left in stock.');
-            }
-            $cart[$productId]['quantity'] = $newQty;
+        // 3. Update or Create in Database
+        if ($cartItem) {
+            $cartItem->update(['qty' => $newQty]);
         } else {
-            $cart[$productId] = [
-                'name' => $product->name,
-                'price' => $product->price,
-                'quantity' => $quantity,
-                'image' => optional($product->images->first())->path ?? null,
-            ];
+            CartItem::create([
+                'user_id' => $userId,
+                'product_id' => $productId,
+                'qty' => $quantity,
+            ]);
         }
-
-        session()->put('cart', $cart);
 
         return back()->with('success', 'Product added to cart!');
     }

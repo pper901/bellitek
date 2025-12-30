@@ -81,7 +81,7 @@
                             <p>{{ $address->country }}, {{ $address->postal_code }}</p>
                             <p>Phone: {{ $address->phonenumber }}</p>
                         </address>
-                        <a href="{{ route('checkout.address') }}" class="text-sm text-blue-600 hover:text-blue-800 transition mt-2 inline-block">Change Address</a>
+                        <a href="{{ route('cart.checkout') }}" class="text-sm text-blue-600 hover:text-blue-800 transition mt-2 inline-block">Change Address</a>
                     </div>
                     
                     <!-- Shipping Method (Placeholder for Courier Options) -->

@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Client\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use App\Models\User; // Added User model path
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\WarehouseSetting;
-use App\Models\ApiCall; // <-- NEW
-use App\Models\ApiProvider; // <-- NEW
+use App\Models\ApiCall; 
+use App\Models\ApiProvider; 
+use Illuminate\Http\Client\Response;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -18,13 +19,9 @@ use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
-    // --- API Provider Constants ---
     private const SHIPBUBBLE_IDENTIFIER = 'SHIPBUBBLE';
     private const PAYSTACK_IDENTIFIER = 'PAYSTACK';
 
-    /**
-     * STEP 1 — Select Address
-     */
     public function index()
     {
         $user = Auth::user();
@@ -37,11 +34,12 @@ class CheckoutController extends Controller
     public function saveAddress(Request $request)
     {
         $request->validate([
-            'street' => 'required',
-            'city' => 'required',
-            'state' => 'required',
-            'postal_code' => 'required',
-            'country' => 'required'
+            'street'       => 'required',
+            'city'         => 'required',
+            'state'        => 'required',
+            'postal_code'  => 'required',
+            'country'      => 'required',
+            'phonenumber'  => 'required|string|min:10',
         ]);
 
         $address = Auth::user()->addresses()->create($request->all());
@@ -58,97 +56,73 @@ class CheckoutController extends Controller
         $cart = CartItem::where('user_id', $user->id)->with('product')->get();
         
         try {
-            // Find the address or fail
             $address = $user->addresses()->findOrFail($request->address);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (\Exception $e) {
             return back()->with('error', 'Shipping address not found.');
         }
 
         $subtotal = $cart->sum(fn ($i) => $i->qty * $i->product->price);
         $tax = 0;
 
-        $shipBubbleBaseUrl = 'https://api.shipbubble.com/v1/';
-        $shipBubbleEnvKey = 'SHIPBUBBLE_API_KEY';
+        // Check if address already has a code
+        $receiverCode = $address->address_code;
 
-        // --- 1. Validate Receiver Address ---
-        $validationPayload = [
-            'name' => $this->normalizeName($user->name),
-            'email' => $user->email,
-            'phone' => $address->phonenumber,
-            'address' => "{$address->street}, {$address->city}, {$address->state}, {$address->country}",
-            'latitude' => 0,
-            'longitude' => 0,
-        ];
-
-        $receiverResponse = $this->makeApiCall(
-            'POST', 
-            'shipping/address/validate', 
-            $validationPayload, 
-            'ShipBubble Validation', 
-            $shipBubbleBaseUrl,
-            $shipBubbleEnvKey,
-            self::SHIPBUBBLE_IDENTIFIER
-        );
-
-        // Check if the helper returned a RedirectResponse (an error)
-        if ($receiverResponse instanceof \Illuminate\Http\RedirectResponse) {
-            return $receiverResponse;
-        }
-
-        $receiverCode = $receiverResponse->json('data.address_code');
         if (!$receiverCode) {
-            return back()->with('error', 'ShipBubble failed to return a valid receiver address code.');
+            $validationPayload = [
+                'name' => $this->normalizeName($user->name),
+                'email' => $user->email,
+                'phone' => $address->phonenumber,
+                'address' => "{$address->street}, {$address->city}, {$address->state}, {$address->country}",
+                'latitude' => 0, 'longitude' => 0,
+            ];
+
+            $receiverResponse = $this->makeApiCall('POST', 'shipping/address/validate', $validationPayload, 'ShipBubble Validation', self::SHIPBUBBLE_IDENTIFIER);
+
+            if ($receiverResponse instanceof RedirectResponse) return $receiverResponse;
+
+            $receiverCode = $receiverResponse->json('data.address_code');
+            if (!$receiverCode) return back()->with('error', 'ShipBubble failed to return a valid receiver address code.');
+
+            $address->update(['address_code' => $receiverCode]);
         }
 
-        $address->address_code = $receiverCode;
-        $address->save();
-
-
-        
-        // Get the admin user
+        // Call ShipBubble Rates API
         $admin = User::where('is_admin', true)->first();
-
-        // --- 2. Call ShipBubble Rates API ---
         $warehouse = WarehouseSetting::where('user_id', $admin->id)->first();
-        if (!$warehouse || !$warehouse->address_code) {
-             return back()->with('error', 'Warehouse address is not configured. Please contact the administrator.');
-        }
         
-        $category_id = $this->getElectronicsCategoryId();
+        if (!$warehouse || !$warehouse->address_code) {
+            return back()->with('error', 'Warehouse address is not configured.');
+        }
         
         $packageItems = $cart->map(fn ($item) => [
             "name" => $item->product->name,
             "description" => $item->product->description ?? "Item",
             "unit_weight" => (string) $item->product->weight,
-            "unit_amount" => "{$item->product->price}",
-            "quantity" => "{$item->qty}"
+            "unit_amount" => (string) $item->product->price,
+            "quantity" => (string) $item->qty
         ])->toArray();
 
         $ratesPayload = [
             "sender_address_code" => (int)$warehouse->address_code,
             "reciever_address_code" => (int)$receiverCode,
             "pickup_date" => now()->addDay()->format("Y-m-d"),
-            "category_id" => $category_id,
+            "category_id" => $this->getElectronicsCategoryId(),
             "package_items" => $packageItems,
             "package_dimension" => [ "length" => 10, "width" => 10, "height" => 10 ]
         ];
         
-        // FIX: Changed from 'shipping/address/validate' to the correct 'shipping/fetch_rates'
-        $rateResponse = $this->makeApiCall(
-            'POST', 
-            'shipping/fetch_rates', // <-- CORRECTED ENDPOINT
-            $ratesPayload, 
-            'ShipBubble Rates Fetch', // <-- CORRECTED LOG TAG
-            $shipBubbleBaseUrl, 
-            $shipBubbleEnvKey, 
-            self::SHIPBUBBLE_IDENTIFIER
-        );
+        $rateResponse = $this->makeApiCall('POST', 'shipping/fetch_rates', $ratesPayload, 'ShipBubble Rates Fetch', self::SHIPBUBBLE_IDENTIFIER);
 
-        if ($rateResponse instanceof \Illuminate\Http\RedirectResponse) {
-            return $rateResponse;
-        }
+        if ($rateResponse instanceof RedirectResponse) return $rateResponse;
 
         $couriers = $rateResponse->json('data.couriers') ?? [];
+        $requestToken = $rateResponse->json('data.request_token');
+
+        // --- NEW: Cache the rates and token for this user ---
+        Cache::put("checkout_rates_{$user->id}", [
+            'couriers' => $couriers,
+            'request_token' => $requestToken
+        ], now()->addMinutes(20));
 
         $shipping = count($couriers) ? collect($couriers)->min('total') : 0;
         $grandTotal = $subtotal + $tax + $shipping;
@@ -157,79 +131,59 @@ class CheckoutController extends Controller
             'cart', 'address', 'subtotal', 'tax', 'shipping', 'grandTotal', 'couriers', 'user'
         ));
     }
-    
-    // ... helper methods like normalizeName() and getElectronicsCategoryId() ...
 
-    
     /**
-     * Executes an API call, handles success/error logging, and records the cost upon success.
-     * * @param string $method HTTP method (GET/POST)
-     * @param string $endpoint API endpoint path (e.g., 'shipping/address/validate')
-     * @param array $data Request payload
-     * @param string $logTag Description for logging
-     * @param string $baseUrl API base URL
-     * @param string $apiKeyEnv Environment variable key for the API token
-     * @param string $providerIdentifier Identifier used in ApiProvider model (e.g., 'SHIPBUBBLE')
-     * @param int|null $orderId The order ID related to this call (if applicable)
-     * @return \Illuminate\Http\Client\Response|\Illuminate\Http\RedirectResponse
+     * Refactored makeApiCall using config(services)
      */
     protected function makeApiCall(
         string $method, 
         string $endpoint, 
         array $data, 
         string $logTag,
-        string $baseUrl, 
-        string $apiKeyEnv,
         string $providerIdentifier,
         ?int $orderId = null
     ): Response|RedirectResponse {
         
-        $fullUrl = $baseUrl . $endpoint;
-        $apiKey = env($apiKeyEnv);
+        // Dynamic config resolution
+        $configKey = strtolower($providerIdentifier); // 'shipbubble' or 'paystack'
+        $baseUrl = config("services.{$configKey}.base_url");
+        $apiKey = ($providerIdentifier === self::PAYSTACK_IDENTIFIER) 
+            ? config('services.paystack.key') 
+            : config('services.shipbubble.key');
 
-        if (!$apiKey) {
-            Log::error("Missing API Key", ['env_key' => $apiKeyEnv, 'log_tag' => $logTag]);
-            return back()->with('error', "Configuration Error: Missing API key ({$apiKeyEnv}).");
+        if (!$baseUrl || !$apiKey) {
+            Log::error("Missing API Configuration for {$providerIdentifier}");
+            return back()->with('error', "Configuration Error: API settings missing for {$logTag}.");
         }
-        
-        Log::info("Attempting {$logTag} API call to: {$fullUrl}", ['payload' => $data]);
+
+        $fullUrl = rtrim($baseUrl, '/') . '/' . ltrim($endpoint, '/');
         
         try {
-            // Execute the API request using the dynamic token
             $response = Http::withToken($apiKey)->{$method}($fullUrl, $data);
             
-            // Log the full response for debugging
             Log::info("{$logTag} Response", ['status' => $response->status(), 'body' => $response->json()]);
 
-            // Check for HTTP errors (4xx or 5xx)
             if ($response->failed()) {
                 $errorDetails = $response->json('message') ?? $response->reason();
-                Log::error("{$logTag} failed with HTTP status: {$response->status()}", ['error_details' => $errorDetails]);
                 return back()->with('error', "API Error ({$logTag}): {$errorDetails}");
             }
             
-            // Check for API Logic Failure (e.g., Paystack/Shipbubble may return 200 OK with status: false)
             if (isset($response['status']) && $response['status'] === false) {
                  $errorMessage = $response->json('message') ?? 'API logic failed.';
-                 Log::error("{$logTag} failed with logic error.", ['error_message' => $errorMessage]);
                  return back()->with('error', "API Logic Error ({$logTag}): {$errorMessage}");
             }
 
-            // --- API CALL RECORDING (Executed only on successful response) ---
+            // Record API Call
             $providerId = $this->getApiProviderId($providerIdentifier);
             if ($providerId) {
                  $this->recordApiCallCost($providerId, $orderId, $endpoint);
             }
-            // -----------------------------------------------------------------
 
             return $response;
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::error("{$logTag} Connection Failure", ['exception' => $e->getMessage()]);
-            return back()->with('error', "Network Error: Could not connect to the API for {$logTag}.");
         } catch (\Exception $e) {
-            Log::error("{$logTag} Unexpected Exception", ['exception' => $e->getMessage()]);
-            return back()->with('error', "An unexpected error occurred during the API call for {$logTag}.");
+            Log::error("{$logTag} Exception", ['exception' => $e->getMessage()]);
+            return back()->with('error', "Connection error during {$logTag}.");
         }
     }
 
@@ -284,103 +238,49 @@ class CheckoutController extends Controller
      */
     public function initiatePayment(Request $request)
     {
-        
-        // ---------------------------------------------------------------------
-        // 🔵 STEP 1 — PRE-FLIGHT CHECKS & CALCULATION
-        // ---------------------------------------------------------------------
-
         $request->validate([
             'address_id' => 'required|exists:addresses,id',
             'courier_code' => 'required|string'
         ]);
 
-        
-        // Get the admin user
-        $admin = User::where('is_admin', true)->first();
         $user = Auth::user();
-        $cart = CartItem::where('user_id', $user->id)->with('product')->get();
-
-        if ($cart->isEmpty()) {
-            return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
-        }
-
-        try {
-            // Load necessary models, using try/catch for FindOrFail
-            $address = $user->addresses()->findOrFail($request->address_id);
-            $warehouse = WarehouseSetting::where('user_id', $admin->id)->first();
-        } catch (\Exception $e) {
-            return back()->with('error', 'Configuration or data error: ' . $e->getMessage());
-        }
-
-        $items_total = $cart->sum(fn($item) => $item->qty * $item->product->price);
         
-        // REBUILD PACKAGE ITEMS for ShipBubble call
-        $packageItems = $cart->map(fn ($item) => [
-            "name" => $item->product->name,
-            "description" => $item->product->description ?? "Item",
-            "unit_weight" => (string) $item->product->weight,
-            "unit_amount" => (string)$item->product->price,
-            "quantity" => (string)$item->qty
-        ])->toArray();
+        // --- NEW: Retrieve data from Cache instead of API ---
+        $cachedData = Cache::get("checkout_rates_{$user->id}");
 
-        // ---------------------------------------------------------------------
-        // 🔵 STEP 2 — RE-FETCH SHIPPING RATES (SHIPBUBBLE API)
-        // ---------------------------------------------------------------------
-        
-        $shipBubbleBaseUrl = 'https://api.shipbubble.com/v1/';
-        $shipBubbleEnvKey = 'SHIPBUBBLE_API_KEY';
-
-        $ratesPayload = [
-            "sender_address_code" => (int)$warehouse->address_code,
-            "reciever_address_code" => (int)$address->address_code,
-            "pickup_date" => now()->addDay()->format("Y-m-d"),
-            "category_id" => $this->getElectronicsCategoryId(), 
-            "package_items" => $packageItems,
-            "package_dimension" => [ "length" => 10, "width" => 10, "height" => 10 ]
-        ];
-
-        $rateResponse = $this->makeApiCall(
-            'POST', 
-            'shipping/fetch_rates', 
-            $ratesPayload, 
-            'ShipBubble Re-Rate',
-            $shipBubbleBaseUrl, 
-            $shipBubbleEnvKey,
-            self::SHIPBUBBLE_IDENTIFIER
-        );
-
-        // Check if the helper returned an error redirect
-        if ($rateResponse instanceof \Illuminate\Http\RedirectResponse) {
-            return $rateResponse;
+        if (!$cachedData) {
+            return back()->with('error', 'Your shipping rates have expired. Please refresh the summary page to get updated pricing.');
         }
 
-        $couriers = $rateResponse->json('data.couriers') ?? [];
+        $couriers = $cachedData['couriers'];
+        $requestToken = $cachedData['request_token'];
 
-        if (empty($couriers)) {
-            // Check for API-specific failure if status was HTTP 200
-            return back()->with('error', 'ShipBubble returned no shipping rates.');
-        }
-
-        // FIND COURIER BY CODE (secure)
+        // Find the selected courier in the cached list
         $selectedCourier = collect($couriers)->firstWhere('service_code', $request->courier_code);
 
         if (!$selectedCourier) {
-            return back()->with('error', 'Invalid courier selected or rate expired.');
+            return back()->with('error', 'The selected courier is no longer available. Please try refreshing the summary.');
         }
 
-        $shipping_amount = $selectedCourier['total'];
-        $grand_total = $items_total + $shipping_amount;
-        $requestToken = $rateResponse->json('data.request_token'); // Access using json() for safety
-        
-        // ---------------------------------------------------------------------
-        // 🔵 STEP 3 — CREATE ORDER AND INITIATE PAYSTACK PAYMENT
-        // ---------------------------------------------------------------------
+        // Pre-flight checks
+        $cart = CartItem::where('user_id', $user->id)->with('product')->get();
+        if ($cart->isEmpty()) return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
 
+        try {
+            $address = $user->addresses()->findOrFail($request->address_id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Address error: ' . $e->getMessage());
+        }
+
+        $items_total = $cart->sum(fn($item) => $item->qty * $item->product->price);
+        $shipping_amount = $selectedCourier['total'];
+
+        // --- STEP 1: CREATE LOCAL ORDER ---
         $order = Order::create([
             'user_id' => $user->id,
             'shipping_amount' => $shipping_amount,
             'items_total' => $items_total,
-            'grand_total' => $grand_total,
+            'grand_total' => $items_total + $shipping_amount,
             'payment_status' => 'pending_payment',
             'customer_name' => $user->name,
             'customer_email' => $user->email,
@@ -389,12 +289,12 @@ class CheckoutController extends Controller
             'city' => $address->city,
             'state' => $address->state,
             'request_token' => $requestToken, 
-            'tracking_code' => null,
         ]);
-        
+
+        // --- STEP 2: INITIATE PAYMENT (PAYSTACK) ---
         $paystackData = [
             'email' => $order->customer_email,
-            'amount' => (int)($order->grand_total * 100), // Convert to kobo/cent
+            'amount' => (int)($order->grand_total * 100),
             'reference' => 'BELLI-' . time() . '-' . $order->id,
             'callback_url' => route('checkout.callback'),
             'metadata' => [
@@ -404,118 +304,66 @@ class CheckoutController extends Controller
             ],
         ];
 
-        $paystackBaseUrl = 'https://api.paystack.co/';
-        $paystackEnvKey = 'PAYSTACK_SECRET';
-
         $paystackResponse = $this->makeApiCall(
             'POST', 
             'transaction/initialize', 
             $paystackData, 
             'Paystack Initialize',
-            $paystackBaseUrl, 
-            $paystackEnvKey,
             self::PAYSTACK_IDENTIFIER,
-            $order->id // Pass the Order ID for logging
+            $order->id
         );
 
-        // Check if the helper returned an error redirect
-        if ($paystackResponse instanceof \Illuminate\Http\RedirectResponse) {
-             // Rollback the order creation if payment initiation fails
-             $order->delete();
-             return $paystackResponse;
+        if ($paystackResponse instanceof RedirectResponse) {
+            $order->delete();
+            return $paystackResponse;
         }
 
-        // ---------------------------------------------------------------------
-        // 🔵 STEP 4 — REDIRECT TO PAYMENT GATEWAY
-        // ---------------------------------------------------------------------
+        // Optional: Clear rates cache now that order is created
+        Cache::forget("checkout_rates_{$user->id}");
 
-        $paymentUrl = $paystackResponse->json('data.authorization_url');
-
-        if (!$paymentUrl) {
-            return back()->with('error', 'Paystack did not return a valid authorization URL.');
-        }
-
-        return redirect($paymentUrl);
+        return redirect($paystackResponse->json('data.authorization_url'));
     }
 
 
     /**
      * STEP 4 — PAYSTACK CALLBACK (CREATE ORDER + SHIPBUBBLE LABEL)
      */
-   public function callback(Request $request)
+    public function callback(Request $request)
     {
         $reference = $request->reference;
-        
-        // Safety check for missing reference
         if (empty($reference)) {
-            return redirect()->route('cart.index')->with('error', 'Payment verification failed: No reference provided.');
+            return redirect()->route('cart.index')->with('error', 'No payment reference provided.');
         }
 
-        // --- 1. VERIFY PAYMENT WITH PAYSTACK ---
-        
-        $paystackBaseUrl = 'https://api.paystack.co/';
-        $paystackEnvKey = 'PAYSTACK_SECRET';
-
-        // NOTE: Paystack GET request to verify must be empty array, not null
+        // --- 1. VERIFY PAYMENT (PAYSTACK) ---
         $verifyResponse = $this->makeApiCall(
             'GET', 
             "transaction/verify/{$reference}", 
             [], 
             'Paystack Verification',
-            $paystackBaseUrl, 
-            $paystackEnvKey,
-            self::PAYSTACK_IDENTIFIER // Log this verification call
+            self::PAYSTACK_IDENTIFIER
         );
 
-        // Check if the helper returned an error redirect
-        if ($verifyResponse instanceof \Illuminate\Http\RedirectResponse) {
-            return $verifyResponse;
-        }
-
-        // Check for API-specific failure (Paystack uses 'status' boolean inside 200 OK)
-        if (!$verifyResponse->json('status')) {
-            $message = $verifyResponse->json('message') ?? 'Verification API responded but payment status is not successful.';
-            return redirect()->route('cart.index')->with('error', $message);
-        }
+        if ($verifyResponse instanceof RedirectResponse) return $verifyResponse;
 
         $data = $verifyResponse->json('data');
-        $user = Auth::user();
-
-        // --- 2. RETRIEVE ORDER METADATA ---
         
         try {
-            $orderId = $data['metadata']['order_id'] ?? null;
-            if (!$orderId) {
-                throw new \Exception("Metadata is missing 'order_id'.");
-            }
+            $orderId = $data['metadata']['order_id'];
             $order = Order::findOrFail($orderId);
         } catch (\Exception $e) {
-            return redirect()->route('cart.index')->with('error', 'Critical Error: Order record not found based on payment metadata.');
+            return redirect()->route('cart.index')->with('error', 'Order not found.');
         }
 
-        // Update the log entry for Paystack Verification with the Order ID
-        $providerId = $this->getApiProviderId(self::PAYSTACK_IDENTIFIER);
-        if ($providerId) {
-            // Since makeApiCall already logged the initial successful verification, 
-            // we manually update the last created ApiCall record to link the Order ID.
-            // A more robust solution would be to pass the order ID to makeApiCall in step 3.
-            // However, we ensure the order_id is logged in all future calls.
-        }
-
-        $courierCode = $data['metadata']['courier_code'] ?? null;
-        $serviceCode = $data['metadata']['service_code'] ?? null; 
-
-        // --- 3. UPDATE ORDER STATUS AND TRANSFER CART ITEMS ---
-        
+        // --- 2. UPDATE ORDER & STOCK ---
         $order->update([
             'payment_status' => 'paid',
             'payment_reference' => $reference,
             'order_status' => 'processing',
         ]);
 
-        // Get and transfer cart items
-        $cart = CartItem::where('user_id', $user->id)->with('product')->get();
-        foreach ($cart as $item) {
+        $cartItems = CartItem::where('user_id', Auth::id())->get();
+        foreach ($cartItems as $item) {
             OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $item->product_id,
@@ -523,38 +371,16 @@ class CheckoutController extends Controller
                 'price' => $item->product->price,
                 'total' => $item->qty * $item->product->price
             ]);
+            
+            $item->product->decrement('stock', $item->qty);
         }
+        CartItem::where('user_id', Auth::id())->delete();
 
-        foreach ($cart as $item) {
-            $product = $item->product;
-
-            // Prevent negative stock (just in case)
-            if ($product->stock < $item->qty) {
-                $product->stock = 0;
-            } else {
-                $product->stock -= $item->qty;
-            }
-
-            $product->save();
-        }
-        
-        // CLEAR CART
-        CartItem::where('user_id', $user->id)->delete();
-
-        // --- 4. CREATE SHIPPING LABEL (SHIPBUBBLE API) ---
-        
-        if (!$order->request_token || !$courierCode || !$serviceCode) {
-             Log::error('Missing data for label creation', ['order_id' => $order->id, 'token' => $order->request_token, 'courier' => $courierCode]);
-             return redirect()->route('checkout.success')->with('warning', 'Payment confirmed, but shipping label creation failed due to missing data. Contact support.');
-        }
-
-        $shipBubbleBaseUrl = 'https://api.shipbubble.com/v1/';
-        $shipBubbleEnvKey = 'SHIPBUBBLE_API_KEY';
-        
+        // --- 3. CREATE SHIPPING LABEL (SHIPBUBBLE) ---
         $shippingPayload = [
             "request_token" => $order->request_token,
-            "courier_id" => $courierCode,
-            "service_code" => $serviceCode, 
+            "courier_id"    => $data['metadata']['courier_code'],
+            "service_code"  => $data['metadata']['service_code'], 
         ];
 
         $shipResponse = $this->makeApiCall(
@@ -562,23 +388,17 @@ class CheckoutController extends Controller
             'shipping/labels', 
             $shippingPayload, 
             'ShipBubble Label Create',
-            $shipBubbleBaseUrl, 
-            $shipBubbleEnvKey,
             self::SHIPBUBBLE_IDENTIFIER,
-            $order->id // Pass the Order ID for logging
+            $order->id
         );
 
-        // Check if the helper returned an error redirect
-        if ($shipResponse instanceof \Illuminate\Http\RedirectResponse) {
-             // We return a success page with a warning, as payment succeeded
-             return redirect()->route('checkout.success')->with('warning', 'Payment confirmed, but shipping label creation failed. Contact support with your order ID.');
+        if ($shipResponse instanceof RedirectResponse) {
+            return redirect()->route('checkout.success')->with('warning', 'Payment successful, but label creation failed. Please contact support.');
         }
 
-        // --- 5. FINALIZE ORDER ---
-        
         $order->update([
             'tracking_code' => $shipResponse->json('data.order_id'),
-            'tracking_url' => $shipResponse->json('data.tracking_url'),
+            'tracking_url'  => $shipResponse->json('data.tracking_url'),
         ]);
 
         return view('pages.checkout.success', compact('order'));
@@ -606,39 +426,21 @@ class CheckoutController extends Controller
 
     protected function getElectronicsCategoryId(): ?int 
     {
-        $cacheKey = 'shipbubble_electronics_category_id';
-        $shipBubbleBaseUrl = 'https://api.shipbubble.com/v1/';
-        $shipBubbleEnvKey = 'SHIPBUBBLE_API_KEY';
-
-        return Cache::remember($cacheKey, 604800, function () use ($shipBubbleBaseUrl, $shipBubbleEnvKey) {
-            
+        return Cache::remember('shipbubble_electronics_category_id', 604800, function () {
             $response = $this->makeApiCall(
                 'GET', 
                 'shipping/labels/categories', 
                 [], 
                 'ShipBubble Categories Fetch',
-                $shipBubbleBaseUrl, 
-                $shipBubbleEnvKey,
                 self::SHIPBUBBLE_IDENTIFIER
             );
 
-            if ($response instanceof \Illuminate\Http\RedirectResponse) {
-                Log::error('ShipBubble categories could not be fetched due to API error.');
-                return null; 
-            }
+            if ($response instanceof RedirectResponse) return null;
             
-            $categories = $response->json('data') ?? [];
-
-            $category = collect($categories)
+            $category = collect($response->json('data') ?? [])
                 ->firstWhere('category', 'Electronics and gadgets');
 
-            $categoryId = $category['category_id'] ?? null;
-            
-            if (!$categoryId) {
-                Log::warning('ShipBubble category "Electronics and gadgets" not found.');
-            }
-
-            return $categoryId;
+            return $category['category_id'] ?? null;
         });
     }
 

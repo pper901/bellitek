@@ -18,6 +18,8 @@ use App\Http\Controllers\Admin\ApiCallController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 // use Uploadcare\Api;
 use Illuminate\Support\Facades\Http;
@@ -33,8 +35,8 @@ Route::middleware(['auth', 'is_admin'])
         Route::get('/repair-logs', [AdminController::class, 'repairLogs'])->name('repairLogs');
         Route::get('/sales', [AdminController::class, 'sales'])->name('sales');
         Route::get('/warehouse', [WarehouseController::class, 'index'])->name('warehouse.index');
-        Route::post('/warehouse', [WarehouseController::class, 'store'])->name('warehouse.store');
-        Route::get('/warehouse', [WarehouseController::class, 'create'])->name('warehouse.create');
+        Route::post('/warehouse/store', [WarehouseController::class, 'store'])->name('warehouse.store');
+        Route::get('/warehouse/create', [WarehouseController::class, 'create'])->name('warehouse.create');
         Route::post('/warehouse', [WarehouseController::class, 'storeAgain'])->name('warehouse.storeAgain');
         Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
@@ -145,7 +147,7 @@ Route::prefix('store')->group(function(){
 Route::middleware('auth')->prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index'])->name('cart.index');
     Route::post('/add/{id}', [CartController::class, 'add'])->name('cart.add');
-    Route::post('/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
+    Route::delete('/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
     Route::patch('/{id}/update', [CartController::class, 'update'])->name('cart.update');
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('cart.checkout');
     Route::post('/address/save', [CheckoutController::class, 'saveAddress'])->name('checkout.saveAddress'); // Save address

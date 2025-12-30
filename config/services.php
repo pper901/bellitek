@@ -41,10 +41,12 @@ return [
     ],
     // ...
     'shipbubble' => [
+        'base_url' => 'https://api.shipbubble.com/v1/',
         'key' => env('SHIPBUBBLE_API_KEY'),
     ],
     // ...
     'paystack' => [
+        'base_url' => 'https://api.paystack.co/',
         'key' => env('PAYSTACK_SECRET'),
     ],
 

@@ -6,6 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class WarehouseSetting extends Model
 {
-    protected $fillable = ['name', 'address_code','email', 'phone', 'address', 'latitude', 'longitude'];
+    protected $fillable = ['user_id', 'name', 'address_code','email', 'phone', 'address', 'latitude', 'longitude'];
 }
 

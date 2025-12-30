@@ -68,7 +68,7 @@
                     
                     <a 
                         href="#"
-                        {{-- CORRECTED: The final $summaryUrl variable (which is a string) is embedded into the JS string --}}
+                        {{-- CORRECTED: The final $summaryUrl variable which is a string is embedded into the JS string --}}
                         @click.prevent="loading = true; window.location.href = '{{ $summaryUrl }}'"
                         
                         class="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
