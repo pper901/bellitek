@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class AdminOrderController extends Controller
 {
+    private const SHIPBUBBLE_IDENTIFIER = 'SHIPBUBBLE';
+    private const PAYSTACK_IDENTIFIER = 'PAYSTACK';
     /**
      * Display a list of paid orders within a specified date range (for Revenue).
      */
@@ -75,7 +77,7 @@ class AdminOrderController extends Controller
         if ($shipResponse instanceof \Illuminate\Http\RedirectResponse) {
             return $shipResponse;
         }
-        
+
         // 4. Handle Response
         if (!$shipResponse->successful()) {
             $error = $shipResponse->json('message') ?? 'Label creation failed again.';
