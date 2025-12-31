@@ -125,17 +125,21 @@ class CheckoutController extends Controller
         $rateResponse = $this->makeApiCall('POST', 'shipping/fetch_rates', $ratesPayload, 'ShipBubble Rates Fetch', self::SHIPBUBBLE_IDENTIFIER);
 
         if ($rateResponse instanceof RedirectResponse) return $rateResponse;
-
         $couriers = $rateResponse->json('data.couriers') ?? [];
+
+        // --- SORT COURIERS BY TOTAL PRICE (Cheapest First) ---
+        $couriers = collect($couriers)->sortBy('total')->values()->all();
+
         $requestToken = $rateResponse->json('data.request_token');
 
-        // --- NEW: Cache the rates and token for this user ---
+        // Cache the sorted list
         Cache::put("checkout_rates_{$user->id}", [
             'couriers' => $couriers,
             'request_token' => $requestToken
         ], now()->addMinutes(20));
 
-        $shipping = count($couriers) ? collect($couriers)->min('total') : 0;
+        // Now $couriers[0] is guaranteed to be the minimum
+        $shipping = count($couriers) ? $couriers[0]['total'] : 0;
         $grandTotal = $subtotal + $tax + $shipping;
 
         return view('pages.checkout.summary', compact(
@@ -247,6 +251,8 @@ class CheckoutController extends Controller
     /**
      * STEP 3 — INITIATE PAYSTACK PAYMENT
      */
+    use Illuminate\Support\Facades\DB;
+
     public function initiatePayment(Request $request)
     {
         $request->validate([
@@ -256,83 +262,91 @@ class CheckoutController extends Controller
 
         $user = Auth::user();
         
-        // --- NEW: Retrieve data from Cache instead of API ---
+        // 1. Retrieve data from Cache
         $cachedData = Cache::get("checkout_rates_{$user->id}");
 
         if (!$cachedData) {
-            return back()->with('error', 'Your shipping rates have expired. Please refresh the summary page to get updated pricing.');
+            return back()->with('error', 'Your shipping rates have expired. Please refresh the summary page.');
         }
 
         $couriers = $cachedData['couriers'];
         $requestToken = $cachedData['request_token'];
 
-        // Find the selected courier in the cached list
+        // 2. Find the selected courier
         $selectedCourier = collect($couriers)->firstWhere('service_code', $request->courier_code);
 
         if (!$selectedCourier) {
-            return back()->with('error', 'The selected courier is no longer available. Please try refreshing the summary.');
+            return back()->with('error', 'The selected courier is no longer available. Please try again.');
         }
 
-        // Pre-flight checks
+        // 3. Pre-flight checks
         $cart = CartItem::where('user_id', $user->id)->with('product')->get();
         if ($cart->isEmpty()) return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
 
         try {
             $address = $user->addresses()->findOrFail($request->address_id);
+            $items_total = $cart->sum(fn($item) => $item->qty * $item->product->price);
+            $shipping_amount = $selectedCourier['total'];
+
+            // --- START DATABASE TRANSACTION ---
+            $authorizationUrl = DB::transaction(function () use ($user, $address, $items_total, $shipping_amount, $requestToken, $request, $selectedCourier) {
+                
+                // Step A: Create the Order
+                $order = Order::create([
+                    'user_id' => $user->id,
+                    'shipping_amount' => $shipping_amount,
+                    'items_total' => $items_total,
+                    'grand_total' => $items_total + $shipping_amount,
+                    'payment_status' => 'pending_payment',
+                    'customer_name' => $user->name,
+                    'customer_email' => $user->email,
+                    'customer_phone' => $address->phonenumber,
+                    'address_line' => $address->street,
+                    'city' => $address->city,
+                    'state' => $address->state,
+                    'request_token' => $requestToken, 
+                ]);
+
+                // Step B: Prepare Paystack Data
+                $paystackData = [
+                    'email' => $order->customer_email,
+                    'amount' => (int)($order->grand_total * 100),
+                    'reference' => 'BELLI-' . time() . '-' . $order->id,
+                    'callback_url' => route('checkout.callback'),
+                    'metadata' => [
+                        'order_id' => $order->id,
+                        'courier_code' => $request->courier_code,
+                        'service_code' => $selectedCourier['service_code'], 
+                    ],
+                ];
+
+                // Step C: Call Paystack API
+                $paystackResponse = $this->makeApiCall(
+                    'POST', 
+                    'transaction/initialize', 
+                    $paystackData, 
+                    'Paystack Initialize',
+                    self::PAYSTACK_IDENTIFIER,
+                    $order->id
+                );
+
+                // If Paystack fails, we throw an exception to ROLLBACK the order creation
+                if ($paystackResponse instanceof RedirectResponse || !$paystackResponse->successful()) {
+                    throw new \Exception('Payment provider initialization failed.');
+                }
+
+                return $paystackResponse->json('data.authorization_url');
+            });
+
+            // If we reached here, the transaction was committed successfully
+            Cache::forget("checkout_rates_{$user->id}");
+            return redirect($authorizationUrl);
+
         } catch (\Exception $e) {
-            return back()->with('error', 'Address error: ' . $e->getMessage());
+            // If anything inside the transaction fails, the order is never saved to the DB
+            \Log::error('Payment Initiation Failed: ' . $e->getMessage());
+            return back()->with('error', 'Could not initiate payment. ' . $e->getMessage());
         }
-
-        $items_total = $cart->sum(fn($item) => $item->qty * $item->product->price);
-        $shipping_amount = $selectedCourier['total'];
-
-        // --- STEP 1: CREATE LOCAL ORDER ---
-        $order = Order::create([
-            'user_id' => $user->id,
-            'shipping_amount' => $shipping_amount,
-            'items_total' => $items_total,
-            'grand_total' => $items_total + $shipping_amount,
-            'payment_status' => 'pending_payment',
-            'customer_name' => $user->name,
-            'customer_email' => $user->email,
-            'customer_phone' => $address->phonenumber,
-            'address_line' => $address->street,
-            'city' => $address->city,
-            'state' => $address->state,
-            'request_token' => $requestToken, 
-        ]);
-
-        // --- STEP 2: INITIATE PAYMENT (PAYSTACK) ---
-        $paystackData = [
-            'email' => $order->customer_email,
-            'amount' => (int)($order->grand_total * 100),
-            'reference' => 'BELLI-' . time() . '-' . $order->id,
-            'callback_url' => route('checkout.callback'),
-            'metadata' => [
-                'order_id' => $order->id,
-                'courier_code' => $request->courier_code,
-                'service_code' => $selectedCourier['service_code'], 
-            ],
-        ];
-
-        $paystackResponse = $this->makeApiCall(
-            'POST', 
-            'transaction/initialize', 
-            $paystackData, 
-            'Paystack Initialize',
-            self::PAYSTACK_IDENTIFIER,
-            $order->id
-        );
-
-        if ($paystackResponse instanceof RedirectResponse) {
-            $order->delete();
-            return $paystackResponse;
-        }
-
-        // Optional: Clear rates cache now that order is created
-        Cache::forget("checkout_rates_{$user->id}");
-
-        return redirect($paystackResponse->json('data.authorization_url'));
     }
 
 

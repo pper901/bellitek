@@ -88,15 +88,27 @@
                     <div>
                         <h3 class="font-semibold text-lg text-gray-700 mb-2">Shipping Method</h3>
                         @if(!empty($couriers))
-                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <p class="font-medium text-gray-800">{{ $couriers[0]['courier_name'] ?? 'Standard Delivery' }}</p>
-                                <p class="text-sm text-gray-600">{{ $couriers[0]['service_code'] ?? '3-5 business days' }}</p>
-                                <p class="text-sm font-bold text-green-700 mt-1">
-                                    ₦{{ number_format($selectedShippingCost) }}
-                                </p>
+                            <div class="p-3 bg-white rounded-lg border-2 border-blue-500 shadow-sm">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-gray-800">{{ $couriers[0]['courier_name'] }}</p>
+                                        <p class="text-xs text-gray-500 uppercase tracking-wider">{{ $couriers[0]['service_type'] }}</p>
+                                        <p class="text-sm text-gray-600">{{ $couriers[0]['delivery_eta'] }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-lg font-extrabold text-blue-700">
+                                            ₦{{ number_format($couriers[0]['total']) }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {{-- IMPORTANT: Pass this specific courier code to the payment function --}}
+                                <input type="hidden" name="courier_code" value="{{ $couriers[0]['service_code'] }}">
                             </div>
+                            
+                            <p class="text-xs text-gray-400 mt-2 italic">* We've selected the fastest cheapest courier for your location.</p>
                         @else
-                            <p class="text-red-500 text-sm">No shipping options available for this region.</p>
+                            <p class="text-red-500">No shipping methods available for this address.</p>
                         @endif
                     </div>
                 </div>
