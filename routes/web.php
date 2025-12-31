@@ -40,7 +40,7 @@ Route::middleware(['auth', 'is_admin'])
         Route::post('/warehouse', [WarehouseController::class, 'storeAgain'])->name('warehouse.storeAgain');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/{order}/retry-shipping', [AdminOrderController::class, 'retryShipping'])->name('orders.retry-shipping');
+        Route::post('/orders/{order}/retry-shipping', [AdminOrderController::class, 'retryShipping'])->name('orders.retry-shipping');
 
 
 

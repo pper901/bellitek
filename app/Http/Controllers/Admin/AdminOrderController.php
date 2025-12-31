@@ -70,6 +70,12 @@ class AdminOrderController extends Controller
             $order->id
         );
 
+        // If the API call failed, makeApiCall already returned a 'back()->with()' redirect.
+        // We need to return that redirect immediately to stop the code here.
+        if ($shipResponse instanceof \Illuminate\Http\RedirectResponse) {
+            return $shipResponse;
+        }
+        
         // 4. Handle Response
         if (!$shipResponse->successful()) {
             $error = $shipResponse->json('message') ?? 'Label creation failed again.';
