@@ -32,7 +32,11 @@ class WarehouseController extends Controller
      */
     public function create()
     {
-        return view('admin.warehouse.create');
+        // Fetch the very first (or latest) warehouse record in the table
+        $current = Warehouse::first(); 
+
+        // Pass it to the view using compact()
+        return view('admin.warehouse.create', compact('current'));
     }
 
     /**
