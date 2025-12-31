@@ -38,8 +38,10 @@ Route::middleware(['auth', 'is_admin'])
         Route::post('/warehouse/store', [WarehouseController::class, 'store'])->name('warehouse.store');
         Route::get('/warehouse/create', [WarehouseController::class, 'create'])->name('warehouse.create');
         Route::post('/warehouse', [WarehouseController::class, 'storeAgain'])->name('warehouse.storeAgain');
-        Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
-        Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}/retry-shipping', [AdminOrderController::class, 'retryShipping'])->name('orders.retry-shipping');
+
 
 
 
@@ -155,6 +157,7 @@ Route::middleware('auth')->prefix('cart')->group(function () {
     Route::post('/checkout/shipping-rate', [ShippingController::class, 'getRate'])->name('checkout.shippingRate');
     Route::post('/checkout/initiate-payment', [CheckoutController::class, 'initiatePayment'])->name('checkout.pay');
     Route::get('/checkout/payment/callback', [CheckoutController::class, 'callback'])->name('checkout.callback');
+    Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
 
     Route::get('/order/{order}/track', [CheckoutController::class, 'track'])->name('orders.track');
     

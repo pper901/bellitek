@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Mail\OrderSuccessful;
+use App\Mail\AdminShippingActionRequired;
+use Illuminate\Support\Facades\Mail;
 
 class CheckoutController extends Controller
 {
@@ -353,6 +356,7 @@ class CheckoutController extends Controller
     /**
      * STEP 4 — PAYSTACK CALLBACK (CREATE ORDER + SHIPBUBBLE LABEL)
      */
+
     public function callback(Request $request)
     {
         $reference = $request->reference;
@@ -369,64 +373,100 @@ class CheckoutController extends Controller
             self::PAYSTACK_IDENTIFIER
         );
 
-        if ($verifyResponse instanceof RedirectResponse) return $verifyResponse;
+        if ($verifyResponse instanceof RedirectResponse || !$verifyResponse->successful()) {
+            return redirect()->route('cart.index')->with('error', 'Payment verification failed.');
+        }
 
         $data = $verifyResponse->json('data');
-        
+        if ($data['status'] !== 'success') {
+            return redirect()->route('cart.index')->with('error', 'Transaction failed: ' . $data['gateway_response']);
+        }
+
         try {
             $orderId = $data['metadata']['order_id'];
-            $order = Order::findOrFail($orderId);
-        } catch (\Exception $e) {
-            return redirect()->route('cart.index')->with('error', 'Order not found.');
-        }
+            $order = Order::with('items.product')->findOrFail($orderId);
 
-        // --- 2. UPDATE ORDER & STOCK ---
-        $order->update([
-            'payment_status' => 'paid',
-            'payment_reference' => $reference,
-            'order_status' => 'processing',
-        ]);
+            if ($order->payment_status === 'paid') {
+                return redirect()->route('checkout.success', ['order' => $order->id]);
+            }
 
-        $cartItems = CartItem::where('user_id', Auth::id())->get();
-        foreach ($cartItems as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item->product_id,
-                'qty' => $item->qty,
-                'price' => $item->product->price,
-                'total' => $item->qty * $item->product->price
+            // --- 2. DATABASE TRANSACTION ---
+            DB::transaction(function () use ($order, $reference) {
+                $order->update([
+                    'payment_status' => 'paid',
+                    'payment_reference' => $reference,
+                    'order_status' => 'processing',
+                ]);
+
+                $cartItems = CartItem::where('user_id', $order->user_id)->get();
+                foreach ($cartItems as $item) {
+                    $order->items()->create([
+                        'product_id' => $item->product_id,
+                        'qty' => $item->qty,
+                        'price' => $item->product->price,
+                        'total' => $item->qty * $item->product->price
+                    ]);
+                    $item->product->decrement('stock', $item->qty);
+                }
+                CartItem::where('user_id', $order->user_id)->delete();
+            });
+
+            // --- 3. SEND NOTIFICATION EMAIL ---
+            try {
+                // We reload the order to ensure items are attached for the email
+                Mail::to($order->customer_email)->send(new OrderSuccessful($order));
+            } catch (\Exception $e) {
+                \Log::error("Email failed for Order #{$order->id}: " . $e->getMessage());
+                // We don't stop the flow; the customer still paid even if email fails.
+            }
+
+            // --- 4. CREATE SHIPPING LABEL (SHIPBUBBLE) ---
+            $shippingPayload = [
+                "request_token" => $order->request_token,
+                "courier_id"    => $data['metadata']['courier_code'] ?? $data['metadata']['service_code'],
+                "service_code"  => $data['metadata']['service_code'], 
+            ];
+
+            $shipResponse = $this->makeApiCall('POST', 'shipping/labels', $shippingPayload, 'ShipBubble Label', self::SHIPBUBBLE_IDENTIFIER, $order->id);
+
+            if ($shipResponse instanceof RedirectResponse || !$shipResponse->successful()) {
+                $errorBody = $shipResponse->json('message') ?? $shipResponse->body();
+                
+                // 1. Log the critical error
+                \Log::critical("SHIPBUBBLE FAILURE for Order #{$order->id}: " . $errorBody);
+
+                // 2. Notify Admin via Email
+                try {
+                    // Replace with your actual admin email or a config variable
+                    $adminEmail = User::where('is_admin', true)->first(); 
+                    Mail::to($adminEmail)->send(new AdminShippingActionRequired($order, $errorBody));
+                } catch (\Exception $e) {
+                    \Log::error("Admin notification email failed: " . $e->getMessage());
+                }
+
+                // 3. Update Order to a "Manual Intervention" state
+                $order->update([
+                    'tracking_code' => 'Pending assignment', 
+                    'order_status' => 'manual_intervention' // Useful for filtering in your admin panel
+                ]);
+
+                // 4. Redirect user to success (don't ruin their experience)
+                return redirect()->route('checkout.success', ['order' => $order->id])
+                    ->with('info', 'Your payment was successful! We are currently finalizing your shipping details.');
+            }
+
+            $order->update([
+                'tracking_code' => $shipResponse->json('data.order_id'),
+                'tracking_url'  => $shipResponse->json('data.tracking_url'),
             ]);
-            
-            $item->product->decrement('stock', $item->qty);
+
+            return redirect()->route('checkout.success', ['order' => $order->id])
+                ->with('success', 'Order placed and shipping scheduled!');
+
+        } catch (\Exception $e) {
+            \Log::error("General Callback Error: " . $e->getMessage());
+            return redirect()->route('cart.index')->with('error', 'Finalizing order failed.');
         }
-        CartItem::where('user_id', Auth::id())->delete();
-
-        // --- 3. CREATE SHIPPING LABEL (SHIPBUBBLE) ---
-        $shippingPayload = [
-            "request_token" => $order->request_token,
-            "courier_id"    => $data['metadata']['courier_code'],
-            "service_code"  => $data['metadata']['service_code'], 
-        ];
-
-        $shipResponse = $this->makeApiCall(
-            'POST', 
-            'shipping/labels', 
-            $shippingPayload, 
-            'ShipBubble Label Create',
-            self::SHIPBUBBLE_IDENTIFIER,
-            $order->id
-        );
-
-        if ($shipResponse instanceof RedirectResponse) {
-            return redirect()->route('checkout.success')->with('warning', 'Payment successful, but label creation failed. Please contact support.');
-        }
-
-        $order->update([
-            'tracking_code' => $shipResponse->json('data.order_id'),
-            'tracking_url'  => $shipResponse->json('data.tracking_url'),
-        ]);
-
-        return view('pages.checkout.success', compact('order'));
     }
 
 
@@ -467,6 +507,11 @@ class CheckoutController extends Controller
 
             return $category['category_id'] ?? null;
         });
+    }
+
+    public function success()
+    {
+        return view('pages.checkout.success'); // Create this blade file
     }
 
 }
