@@ -308,6 +308,9 @@ class CheckoutController extends Controller
                     'city' => $address->city,
                     'state' => $address->state,
                     'request_token' => $requestToken, 
+                    // --- SAVE COURIER INFO HERE ---
+                    'courier_id' => $request->courier_code, // Or whichever variable holds the ID
+                    'service_code' => $selectedCourier['service_code'],
                 ]);
 
                 // Step B: Prepare Paystack Data

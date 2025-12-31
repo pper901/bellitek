@@ -27,7 +27,11 @@ class Order extends Model
     'payment_status',
     'order_status',
     'tracking_code',
+    'tracking_url',
     'request_token',
+    'courier_id',    // Add this
+    'service_code',  // Add this
+    'label_url',
 ];
 
 
