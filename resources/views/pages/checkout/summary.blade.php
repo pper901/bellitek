@@ -28,14 +28,17 @@
 
 
     @php
-    // --- Mock Calculations for the Summary page (must match controller logic) ---
-    $subtotal = $cart->sum(fn($item) => $item->product->price * $item->qty);
-    // Assume $couriers[0]['total_charge'] holds the selected shipping cost
-    $selectedShippingCost = $couriers[0]['total_charge'] ?? 1500;
-    $taxRate = 0.075;
-    $tax = round($subtotal * $taxRate);
-    $grandTotal = $subtotal + $selectedShippingCost + $tax;
-    // --- End Mock Calculations ---
+        // 1. Calculate the base items total
+        $subtotal = $cart->sum(fn($item) => $item->product->price * $item->qty);
+
+        // 2. Get the shipping cost from the FIRST courier (which we sorted by price in the controller)
+        // Note: ShipBubble uses 'total' which already includes their calculated VAT.
+        $selectedShippingCost = !empty($couriers) ? $couriers[0]['total'] : 0;
+
+        // 3. Grand Total 
+        // We remove the manual $tax calculation here because ShipBubble includes 
+        // shipping tax in 'total', and usually, product tax is already in the price.
+        $grandTotal = $subtotal + $selectedShippingCost;
     @endphp
     
     <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
