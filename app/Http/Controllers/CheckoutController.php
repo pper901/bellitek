@@ -252,7 +252,6 @@ class CheckoutController extends Controller
     /**
      * STEP 3 — INITIATE PAYSTACK PAYMENT
      */
-    use Illuminate\Support\Facades\DB;
 
     public function initiatePayment(Request $request)
     {
