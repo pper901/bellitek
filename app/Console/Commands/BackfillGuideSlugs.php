@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Command;
 use App\Models\Guide;
 use Illuminate\Support\Str;
 
