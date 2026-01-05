@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Guide;
-use App\Models\GuideResource; // Ensure this is imported
+use Illuminate\Support\Str;
+use App\Models\GuideResource; 
 
 class GuideController extends Controller
 {
@@ -25,6 +26,8 @@ class GuideController extends Controller
         $guideData = $request->only([
             'device', 'category', 'brand', 'series', 'model', 'issue'
         ]);
+
+        $guideData['issue_slug'] = Str::slug($request->issue);
         
         $guide = Guide::create($guideData); 
 
@@ -55,9 +58,16 @@ class GuideController extends Controller
 
     public function update(Request $request, Guide $guide)
     {
-        $guide->update($request->only([
-            'device','category','brand','series','model','issue'
-        ]));
+       $guide->update([
+            'device'     => $request->device,
+            'category'   => $request->category,
+            'brand'      => $request->brand,
+            'series'     => $request->series,
+            'model'      => $request->model,
+            'issue'      => $request->issue,
+            'issue_slug' => \Str::slug($request->issue),
+        ]);
+
 
         $guide->resources()->delete();
         
@@ -110,9 +120,9 @@ class GuideController extends Controller
             'description' => "Troubleshooting guide for {$guide->device} {$guide->model} {$guide->issue}.",
             'image'       => asset('storage/guides/fixing.png'), // change when you add images later
             'url' => route('guides.show', [
-                'device'   => $guide->device,
-                'category' => $guide->category,
-                'issue'    => $guide->issue,
+                'device'   => $device,
+                'category' => $category,
+                'issue'    => $guide->issue_slug,
             ]),
             'type'        => 'article'
         ];
@@ -126,8 +136,8 @@ class GuideController extends Controller
         $guides = Guide::with(['resources', 'reviews.user'])
             ->where('device', $device)
             ->where('category', $category)
-            ->where('issue', $issue)
-            ->get();
+            ->where('issue_slug', $issue)
+            ->firstOrFail();
 
         $guide = $guides->first(); // ✅ ADD THIS
 
@@ -135,7 +145,11 @@ class GuideController extends Controller
             'title'       => "$device - $issue Troubleshooting Guide",
             'description' => "Learn how to fix $issue on $device under category $category.",
             'image'       => asset('storage/guides/fixing.png'),
-            'url'         => route('guides.show', compact('device','category','issue')),
+            'url' => route('guides.show', [
+                'device'   => $device,
+                'category' => $category,
+                'issue'    => $guide->issue_slug,
+            ]),
             'type'        => 'article'
         ];
 
