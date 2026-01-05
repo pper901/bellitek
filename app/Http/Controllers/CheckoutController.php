@@ -512,9 +512,13 @@ class CheckoutController extends Controller
         });
     }
 
-    public function success()
+
+    public function success(Order $order)
     {
-        return view('pages.checkout.success'); // Create this blade file
+        abort_if($order->user_id !== auth()->id(), 403);
+
+        return view('pages.checkout.success', compact('order'));
     }
+
 
 }

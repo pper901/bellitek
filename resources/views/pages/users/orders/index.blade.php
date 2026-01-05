@@ -12,10 +12,9 @@
                     @php
                         // Get the first item in the order
                         $firstItem = $order->items->first();
-                        // Try to get the first image URL from the product related to the first item
-                        $imageUrl = $firstItem && $firstItem->product && $firstItem->product->images->first() 
-                                    ? asset('storage/' . $firstItem->product->images->first()->path) 
-                                    : asset('images/placeholder.png'); // Use a placeholder if no image exists
+                        
+                        $imagePath = optional($firstItem->product->images->first())->path;
+                        $imageUrl = $imagePath ? $imagePath : 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
                     @endphp
 
                     {{-- Image Display Area --}}

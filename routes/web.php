@@ -157,7 +157,8 @@ Route::middleware('auth')->prefix('cart')->group(function () {
     Route::post('/checkout/shipping-rate', [ShippingController::class, 'getRate'])->name('checkout.shippingRate');
     Route::post('/checkout/initiate-payment', [CheckoutController::class, 'initiatePayment'])->name('checkout.pay');
     Route::get('/checkout/payment/callback', [CheckoutController::class, 'callback'])->name('checkout.callback');
-    Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+
 
     Route::get('/order/{order}/track', [CheckoutController::class, 'track'])->name('orders.track');
     

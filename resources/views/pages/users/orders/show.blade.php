@@ -20,10 +20,8 @@
                 <div class="flex items-center space-x-3">
                     @php
                         // Get the first image path safely
-                        $imagePath = $item->product->images->first()->path;
-                        $imageUrl = $imagePath 
-                                    ? asset('storage/' . $imagePath) 
-                                    : asset('images/placeholder.png'); // Placeholder
+                            $imagePath = optional($item->product->images->first())->path;
+                            $imageUrl = $imagePath ? $imagePath : 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
                     @endphp
 
                     {{-- Image Container: 100% fits inside a fixed 48x48 square --}}

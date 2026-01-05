@@ -24,9 +24,9 @@
         <p>{{ $order->city }}, {{ $order->state }}</p>
         <p>Phone: {{ $order->customer_phone }}</p>
 
-        @if($order->tracking_code)
+        @if($order->tracking_url)
             <div class="mt-10 text-center">
-                <a href="https://app.shipbubble.com/track/{{ $order->tracking_code }}"
+                <a href="{{ $order->tracking_url }}"
                    target="_blank"
                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     Track on ShipBubble

@@ -31,25 +31,6 @@ class OrderShipped extends Mailable
                     ->view('emails.orders.shipped');
     }
 
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
-    {
-        return new Envelope(
-            subject: 'Order Shipped',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'view.name',
-        );
-    }
 
     /**
      * Get the attachments for the message.
