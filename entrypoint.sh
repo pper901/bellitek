@@ -20,7 +20,6 @@ php artisan key:generate --force
 # 3. Run Database Migrations
 echo "Running database migrations..."
 php artisan migrate --force
-php artisan guides:backfill-slugs --force
 
 
 
