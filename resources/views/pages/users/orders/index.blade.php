@@ -9,13 +9,13 @@
                 
                 <div class="flex items-center space-x-4">
                     
-                    @php
-                        // Get the first item in the order
-                        $firstItem = $order->items->first();
-                        
-                        $imagePath = optional($firstItem->product->images->first())->path;
-                        $imageUrl = $imagePath ? $imagePath : 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
-                    @endphp
+               @php
+                    $firstItem = $order->items->first();
+                    $product = optional($firstItem)->product;
+                    $imagePath = optional($product?->images->first())->path;
+                    $imageUrl = $imagePath ?: 'https://placehold.co/100x100/f3f4f6/333333?text=Item';
+                @endphp
+
 
                     {{-- Image Display Area --}}
                     <div class="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border">
