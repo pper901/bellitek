@@ -14,27 +14,47 @@ class AccountingController extends Controller
 {
     public function index(Request $request)
     {
-        // Summary: revenue (orders), API cost, expenses, profit
         $start = $request->get('start') ? Carbon::parse($request->get('start')) : Carbon::now()->startOfMonth();
         $end = $request->get('end') ? Carbon::parse($request->get('end')) : Carbon::now()->endOfMonth();
 
-        // Revenue from paid orders in range
+        // 1. Total Revenue (What customers paid you)
         $revenue = Order::whereBetween('created_at', [$start, $end])
                     ->where('payment_status', 'paid')
                     ->sum('grand_total');
 
-        // API cost aggregated
+        // 2. Cost of Goods Sold (COGS)
+        // We get all items from paid orders in this date range
+        $totalProductPurchaseCost = OrderItem::whereHas('order', function ($query) use ($start, $end) {
+                        $query->whereBetween('created_at', [$start, $end])
+                            ->where('payment_status', 'paid');
+                    })
+                    ->join('products', 'order_items.product_id', '=', 'products.id')
+                    ->selectRaw('SUM(order_items.quantity * products.purchase_price) as total_cost')
+                    ->value('total_cost') ?? 0;
+
+        // 3. API cost aggregated
         $apiCost = ApiCall::whereBetween('created_at', [$start, $end])
                     ->sum('cost_cached');
 
-        // Expenses
+        // 4. Expenses
         $expenses = Expense::whereBetween('incurred_at', [$start, $end])->sum('amount');
 
-        $profit = $revenue - ($apiCost + $expenses);
+        // 5. Final Profit Calculation
+        // Profit = Revenue - (Cost of Buying Products + API Fees + Other Expenses)
+        $profit = $revenue - ($totalProductPurchaseCost + $apiCost + $expenses);
 
         $providers = ApiProvider::all();
 
-        return view('admin.accounting.index', compact('revenue','apiCost','expenses','profit','providers','start','end'));
+        return view('admin.accounting.index', compact(
+            'revenue',
+            'totalProductPurchaseCost', 
+            'apiCost',
+            'expenses',
+            'profit',
+            'providers',
+            'start',
+            'end'
+        ));
     }
 
     // API: update provider costs

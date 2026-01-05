@@ -32,7 +32,38 @@
                             </td>
                             
                             <td class="px-6 py-4 text-sm text-gray-700">
-                                {{-- ... Items logic ... --}}
+                                <div class="flex flex-col gap-2">
+                                    @foreach ($order->items as $item)
+                                        <div class="flex items-center space-x-2 bg-gray-50 p-1.5 rounded-md border border-gray-100">
+                                            {{-- Product Image Thumbnail --}}
+                                            @if($item->product && $item->product->images->first())
+                                                <img src="{{ $item->product->images->first()->path }}" 
+                                                    class="w-8 h-8 object-cover rounded shadow-sm border border-gray-200">
+                                            @else
+                                                <div class="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-[10px] text-gray-400">
+                                                    N/A
+                                                </div>
+                                            @endif
+
+                                            <div class="flex flex-col">
+                                                <span class="font-semibold text-gray-800 leading-tight">
+                                                    {{ $item->product->name ?? 'Deleted Product' }}
+                                                </span>
+                                                <span class="text-[10px] text-gray-500">
+                                                    Qty: <span class="text-indigo-600 font-bold">{{ $item->quantity }}</span> 
+                                                    × ₦{{ number_format($item->price, 2) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                    
+                                    {{-- Show count if it's a long order --}}
+                                    @if($order->items->count() > 3)
+                                        <span class="text-[10px] text-gray-400 italic font-medium pl-1">
+                                            + {{ $order->items->count() - 3 }} more items
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-right text-green-600">

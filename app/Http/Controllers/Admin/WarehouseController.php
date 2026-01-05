@@ -32,8 +32,7 @@ class WarehouseController extends Controller
      */
     public function create()
     {
-        // Fetch the very first (or latest) warehouse record in the table
-        $current = Warehouse::first(); 
+        $current = WarehouseSetting::where('user_id', auth()->id())->first();
 
         // Pass it to the view using compact()
         return view('admin.warehouse.create', compact('current'));
