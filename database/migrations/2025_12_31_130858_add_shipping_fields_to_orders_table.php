@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::table('orders', function (Blueprint $table) {
             $table->string('courier_id')->nullable();
-            $table->string('tracking_url')->nullable();
             $table->string('service_code')->nullable();
             $table->string('label_url')->nullable(); // Good to have for printing
         });
