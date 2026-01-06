@@ -32,7 +32,12 @@
 <div class="space-y-4">
     
     @forelse($issues as $item)
-        <a href="{{ route('guides.show', [$device, $category, $item->issue]) }}"
+        <a href="{{ route('guides.show', [
+    'device'   => $device,
+    'category' => $category,
+    'issue'    => $item->issue_slug ?? \Illuminate\Support\Str::slug($item->issue),
+])
+ }}"
             class="
                 w-full p-5 bg-white rounded-xl border-l-4 border-red-500 
                 shadow-lg transition duration-300 ease-in-out 

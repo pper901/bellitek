@@ -104,7 +104,7 @@ class GuideController extends Controller
     {
         $issues = Guide::where('device', $device)
             ->where('category', $category)
-            ->select('issue')
+            ->select('issue', 'issue_slug')
             ->distinct()
             ->orderBy('issue')
             ->get();
