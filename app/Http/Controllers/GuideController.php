@@ -138,6 +138,8 @@ class GuideController extends Controller
             ->where('category', $category)
             ->where('issue_slug', $issue)
             ->firstOrFail();
+            
+        $guide = $guides->first();
 
         $seo = [
             'title'       => "$device - $issue Troubleshooting Guide",
@@ -146,7 +148,7 @@ class GuideController extends Controller
             'url' => route('guides.show', [
                 'device'   => $device,
                 'category' => $category,
-                'issue'    => $guide->issue_slug,
+                'issue'    => $guides->issue_slug,
             ]),
             'type'        => 'article'
         ];
