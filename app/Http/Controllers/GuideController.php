@@ -119,7 +119,7 @@ class GuideController extends Controller
             'title'       => $guide->issue . ' Fix Guide',
             'description' => "Troubleshooting guide for {$guide->device} {$guide->model} {$guide->issue}.",
             'image'       => asset('storage/guides/fixing.png'), // change when you add images later
-            'url' => route('guides.show', [
+            'url' => route('guides.read', [
                 'device'   => $guide->device,
                 'category' => $guide->category,
                 'issue'    => $guide->issue_slug,
@@ -145,7 +145,7 @@ class GuideController extends Controller
             'title'       => "$device - $issue Troubleshooting Guide",
             'description' => "Learn how to fix $issue on $device under category $category.",
             'image'       => asset('storage/guides/fixing.png'),
-            'url' => route('guides.show', [
+            'url' => route('guides.read', [
                 'device'   => $device,
                 'category' => $category,
                 'issue'    => $guides->issue_slug,
