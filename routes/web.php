@@ -128,7 +128,7 @@ Route::prefix('guides')->group(function () {
 
     Route::get('/{device}/{category}', [GuideController::class, 'issues'])->name('guides.issues');
 
-    Route::get('/{device}/{category}/{issue}', [GuideController::class, 'showU'])->name('guides.read');
+    Route::get('/{device}/{category}/{issue}', [GuideController::class, 'showU'])->name('guides.show');
 
 });
 
