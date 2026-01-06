@@ -9,7 +9,8 @@ use App\Models\Review;
 class Guide extends Model
 {
     protected $fillable = [
-        'device', 'category', 'brand', 'series', 'model', 'issue'
+        'device', 'category', 'brand', 'series', 'model', 'issue',
+    'issue_slug',
     ];
 
     public function resources()
