@@ -114,15 +114,17 @@ class GuideController extends Controller
 
      public function show(Guide $guide)
     {
-        // Optional SEO for admin
+        // Ensure slug exists (runtime safety)
+        $issueSlug = $guide->issue_slug ?: \Illuminate\Support\Str::slug($guide->issue);
+
         $seo = [
             'title'       => $guide->issue . ' Fix Guide',
             'description' => "Troubleshooting guide for {$guide->device} {$guide->model} {$guide->issue}.",
-            'image'       => asset('storage/guides/fixing.png'), // change when you add images later
+            'image'       => asset('storage/guides/fixing.png'),
             'url' => route('guides.read', [
                 'device'   => $guide->device,
                 'category' => $guide->category,
-                'issue'    => $guide->issue_slug,
+                'issue'    => $issueSlug,
             ]),
             'type'        => 'article'
         ];
@@ -130,38 +132,33 @@ class GuideController extends Controller
         return view('admin.guides.show', compact('guide','seo'));
     }
 
+
     // PUBLIC guide reading page
     public function showU($device, $category, $issue)
     {
-        $guides = Guide::with(['resources', 'reviews.user'])
+        $guide = Guide::with(['resources', 'reviews.user'])
             ->where('device', $device)
             ->where('category', $category)
             ->where('issue_slug', $issue)
             ->firstOrFail();
-            
-        $guide = $guides->first();
 
         $seo = [
-            'title'       => "$device - $issue Troubleshooting Guide",
-            'description' => "Learn how to fix $issue on $device under category $category.",
+            'title'       => "{$guide->device} - {$guide->issue} Troubleshooting Guide",
+            'description' => "Learn how to fix {$guide->issue} on {$guide->device} under {$guide->category}.",
             'image'       => asset('storage/guides/fixing.png'),
-            'url' => route('guides.read', [
-                'device'   => $device,
-                'category' => $category,
-                'issue'    => $guides->issue_slug,
-            ]),
-            'type'        => 'article'
+            'url'         => url()->current(),
+            'type'        => 'article',
         ];
 
         return view('pages.guides.show', compact(
             'device',
             'category',
             'issue',
-            'guides',
-            'guide', // ✅ PASS SINGLE GUIDE
+            'guide',
             'seo'
         ));
     }
+
 
 
 
