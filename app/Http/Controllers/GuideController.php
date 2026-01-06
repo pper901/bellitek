@@ -102,15 +102,49 @@ class GuideController extends Controller
 
     public function issues($device, $category)
     {
-        $issues = Guide::where('device', $device)
+        // 1. Fetch all guides (including ones missing slugs)
+        $guides = Guide::where('device', $device)
             ->where('category', $category)
-            ->select('issue', 'issue_slug')
-            ->distinct()
             ->orderBy('issue')
             ->get();
 
+        // 2. Backfill missing slugs safely (in-memory loop, minimal writes)
+        foreach ($guides as $guide) {
+            if (empty($guide->issue_slug)) {
+                $slug = Str::slug($guide->issue);
+
+                // Ensure uniqueness per device + category
+                $original = $slug;
+                $count = 1;
+
+                while (
+                    Guide::where('device', $guide->device)
+                        ->where('category', $guide->category)
+                        ->where('issue_slug', $slug)
+                        ->where('id', '!=', $guide->id)
+                        ->exists()
+                ) {
+                    $slug = "{$original}-{$count}";
+                    $count++;
+                }
+
+                $guide->updateQuietly([
+                    'issue_slug' => $slug,
+                ]);
+            }
+        }
+
+        // 3. Return only clean, slugged data to the view
+        $issues = $guides
+            ->unique('issue_slug')
+            ->map(fn ($g) => (object) [
+                'issue'      => $g->issue,
+                'issue_slug' => $g->issue_slug,
+            ]);
+
         return view('pages.guides.issues', compact('device', 'category', 'issues'));
     }
+
 
      public function show(Guide $guide)
     {

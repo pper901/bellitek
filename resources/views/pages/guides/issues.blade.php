@@ -35,7 +35,7 @@
         <a href="{{ route('guides.show', [
     'device'   => $device,
     'category' => $category,
-    'issue'    => $item->issue_slug ?? \Illuminate\Support\Str::slug($item->issue),
+    'issue'    => $item->issue_slug ,
 ])
  }}"
             class="
