@@ -139,8 +139,6 @@ class GuideController extends Controller
             ->where('issue_slug', $issue)
             ->firstOrFail();
 
-        $guide = $guides->first(); // ✅ ADD THIS
-
         $seo = [
             'title'       => "$device - $issue Troubleshooting Guide",
             'description' => "Learn how to fix $issue on $device under category $category.",
