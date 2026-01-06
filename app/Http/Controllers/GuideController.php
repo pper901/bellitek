@@ -115,7 +115,7 @@ class GuideController extends Controller
      public function show(Guide $guide)
     {
         // Ensure slug exists (runtime safety)
-        $issueSlug = $guide->issue_slug ?: \Illuminate\Support\Str::slug($guide->issue);
+        $issueSlug = $guide->issue_slug ?: Str::slug($guide->issue);
 
         $seo = [
             'title'       => $guide->issue . ' Fix Guide',
@@ -136,12 +136,36 @@ class GuideController extends Controller
     // PUBLIC guide reading page
     public function showU($device, $category, $issue)
     {
+        // 1️⃣ Try resolving by slug first
         $guide = Guide::with(['resources', 'reviews.user'])
             ->where('device', $device)
             ->where('category', $category)
             ->where('issue_slug', $issue)
-            ->firstOrFail();
+            ->first();
 
+        // 2️⃣ Fallback: issue_slug is NULL → match against issue text
+        if (!$guide) {
+            $guide = Guide::with(['resources', 'reviews.user'])
+                ->where('device', $device)
+                ->where('category', $category)
+                ->whereRaw('LOWER(issue) = ?', [str_replace('-', ' ', strtolower($issue))])
+                ->firstOrFail();
+
+            // 3️⃣ Generate slug if missing
+            if (!$guide->issue_slug) {
+                $guide->issue_slug = Str::slug($guide->issue);
+                $guide->saveQuietly();
+            }
+
+            // 4️⃣ Redirect to canonical slug URL (SEO-safe)
+            return redirect()->route('guides.show', [
+                'device'   => $guide->device,
+                'category' => $guide->category,
+                'issue'    => $guide->issue_slug,
+            ], 301);
+        }
+
+        // 5️⃣ Normal render path
         $seo = [
             'title'       => "{$guide->device} - {$guide->issue} Troubleshooting Guide",
             'description' => "Learn how to fix {$guide->issue} on {$guide->device} under {$guide->category}.",
