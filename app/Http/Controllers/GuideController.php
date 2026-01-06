@@ -120,8 +120,8 @@ class GuideController extends Controller
             'description' => "Troubleshooting guide for {$guide->device} {$guide->model} {$guide->issue}.",
             'image'       => asset('storage/guides/fixing.png'), // change when you add images later
             'url' => route('guides.show', [
-                'device'   => $device,
-                'category' => $category,
+                'device'   => $guide->device,
+                'category' => $guide->$category,
                 'issue'    => $guide->issue_slug,
             ]),
             'type'        => 'article'
