@@ -32,7 +32,7 @@
         <p class="text-xl text-gray-600 mt-2">Comprehensive diagnostic and repair walkthrough.</p>
     </header>
 
-    @forelse ($guides as $guide)
+    @if ($guide)
         <div class="mb-12 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             <div class="bg-red-600 px-6 py-4">
                 <h2 class="text-xl font-bold text-white flex items-center">
@@ -73,7 +73,7 @@
             <h3 class="text-xl font-bold text-gray-900">Guide in Progress</h3>
             <p class="text-gray-500 mt-2 max-w-sm mx-auto">We're currently documenting the fix for <span class="text-red-600">{{ $issue }}</span>. Please check back later.</p>
         </div>
-    @endforelse
+    @endif
 
     {{-- REVIEWS SECTION --}}
     <section id="reviews" class="mt-20 border-t border-gray-200 pt-12">
@@ -140,7 +140,7 @@
 
                     <form action="{{ route('reviews.store') }}" method="POST" class="space-y-6">
                         @csrf
-                        <input type="hidden" name="guide_id" value="{{ $guides->first()->id ?? '' }}">
+                        <input type="hidden" name="guide_id" value="{{ $guide->id ?? '' }}">
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
