@@ -48,7 +48,11 @@ RUN composer install --no-dev --optimize-autoloader
 # Build assets (Vite + Tailwind)
 RUN npm install
 # CRITICAL VITE FIX: Explicitly set VITE_APP_URL before the build step
-ENV VITE_APP_URL=https://bellitek-1.onrender.com 
+# ENV VITE_APP_URL=https://bellitek-1.onrender.com 
+
+ARG VITE_APP_URL
+ENV VITE_APP_URL=${VITE_APP_URL}
+
 RUN npm run build 
 
 # --- 4. APACHE CONTAINER SETUP (The Unstoppable Fix) ---
@@ -99,8 +103,8 @@ RUN a2ensite laravel-ultimate.conf
 
 # --- 5. OPTIMIZED RUNTIME ENVIRONMENT ---
 # --- CRITICAL FIX FOR PORT BINDING ON RENDER ---
-ENV PORT=10000 
-RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
+# ENV PORT=10000 
+# RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 # -----------------------------------------------
 
 # FIX: Update the path since the files are now moved to /var/www/app
@@ -108,7 +112,8 @@ RUN echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 RUN cp /var/www/app/.env.example /var/www/app/.env
 
 # Expose the internal port
-EXPOSE 10000
+# EXPOSE 10000
+EXPOSE 80
 
 # --- 6. PRODUCTION COMMANDS (Use the Apache server) ---
 # Use an entrypoint script to run commands BEFORE Apache starts

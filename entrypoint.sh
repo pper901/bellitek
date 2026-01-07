@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Change directory to the application root where artisan resides
 cd /var/www/app
@@ -14,8 +15,8 @@ php artisan view:clear || true
 
 
 # 2. Generate Application Key (CRITICAL for sessions/cookies)
-echo "Generating application key..."
-php artisan key:generate --force
+# echo "Generating application key..."
+# php artisan key:generate --force
 
 # 3. Run Database Migrations
 echo "Running database migrations..."
