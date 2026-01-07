@@ -4,7 +4,6 @@
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-    <!-- Header and Breadcrumb -->
     <header class="mb-10">
         <a href="{{ route('guides.issues', [$device, $category]) }}"
            class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition duration-150 mb-6">
@@ -135,25 +134,40 @@
             <p class="text-gray-500">No reviews yet.</p>
         @endforelse
 
-        @auth
-            <form action="{{ route('reviews.store') }}" method="POST" class="mt-10 space-y-4">
-                @csrf
-                <input type="hidden" name="guide_id" value="{{ $guide->id }}">
+        {{-- Added Login Logic below --}}
+        <div class="mt-10">
+            @auth
+                <form action="{{ route('reviews.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <input type="hidden" name="guide_id" value="{{ $guide->id }}">
 
-                <select name="rating" class="w-full border rounded p-2">
-                    @for ($i = 5; $i >= 1; $i--)
-                        <option value="{{ $i }}">{{ $i }} Stars</option>
-                    @endfor
-                </select>
+                    <select name="rating" class="w-full border rounded-lg p-3">
+                        @for ($i = 5; $i >= 1; $i--)
+                            <option value="{{ $i }}">{{ $i }} Stars</option>
+                        @endfor
+                    </select>
 
-                <textarea name="comment" required rows="4" class="w-full border rounded p-2"
-                          placeholder="Share your experience..."></textarea>
+                    <textarea name="comment" required rows="4" class="w-full border rounded-lg p-3"
+                              placeholder="Share your experience..."></textarea>
 
-                <button class="bg-red-600 text-white px-6 py-3 rounded font-bold">
-                    Submit Review
-                </button>
-            </form>
-        @endauth
+                    <button class="bg-red-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-red-700 transition">
+                        Submit Review
+                    </button>
+                </form>
+            @else
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Want to share your results?</h3>
+                    <p class="text-gray-600 mb-6">Log in to leave a review and help others fix their devices.</p>
+                    <a href="{{ route('login') }}" 
+                       class="inline-block bg-gray-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition">
+                        Log In to Review
+                    </a>
+                    <p class="mt-4 text-sm text-gray-500">
+                        New here? <a href="{{ route('register') }}" class="text-red-600 font-semibold hover:underline">Create an account</a>
+                    </p>
+                </div>
+            @endauth
+        </div>
 
     </section>
     @endif
