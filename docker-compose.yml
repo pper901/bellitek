@@ -1,28 +1,72 @@
 services:
   app:
+    image: bellitek-app
+    container_name: bellitek_app
     build:
       context: .
       args:
         VITE_APP_URL: https://bellitek.com.ng
-    container_name: bellitek_app
-    env_file:
-      - .env
+
+    restart: unless-stopped
+
+    # App listens internally on port 80
+    # Nginx should proxy to 8080
     ports:
       - "127.0.0.1:8080:80"
+
+    environment:
+      APP_ENV: production
+      APP_KEY: base64:7O6J+Y7VZ8Vp1oLfwMWpLAYMd0bM+dkW6t1f2ZBbw0g=
+      APP_DEBUG: "false"
+      APP_URL: https://bellitek.com.ng
+      ASSET_URL: https://bellitek.com.ng
+
+      # Database
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: bellitek
+      DB_USERNAME: bellitek_user
+      DB_PASSWORD: strongpassword
+
+      # Sessions (419-safe)
+      SESSION_DRIVER: database
+      SESSION_DOMAIN: .bellitek.com.ng
+      SESSION_SECURE_COOKIE: "true"
+      SESSION_SAME_SITE: lax
+
+      # Reverse proxy safety
+      TRUSTED_PROXIES: "*"
+
     depends_on:
       - db
-    restart: unless-stopped
+
+    volumes:
+      # Persist Laravel runtime state only
+      - bellitek_app_storage:/var/www/app/storage
 
   db:
     image: postgres:16
     container_name: bellitek_db
+    restart: unless-stopped
+
     environment:
       POSTGRES_DB: bellitek
       POSTGRES_USER: bellitek_user
-      POSTGRES_PASSWORD: strong_password
+      POSTGRES_PASSWORD: strongpassword
+
+    # OPTIONAL: expose only if you really need external DB access
+    # Recommended to REMOVE in production
+    # ports:
+    #   - "5432:5432"
+
     volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: unless-stopped
+      # This is the ONLY place Postgres data lives
+      - bellitek_db_data:/var/lib/postgresql/data
 
 volumes:
-  db_data:
+  bellitek_db_data:
+    name: bellitek_persistent_db_data
+
+  bellitek_app_storage:
+    name: bellitek_persistent_storage

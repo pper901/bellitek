@@ -25,7 +25,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'is_admin'])
+
+
+  Route::middleware(['auth', 'is_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -109,7 +111,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+
+    require __DIR__.'/auth.php';
+
 
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/services', [PageController::class, 'services'])->name('services');
@@ -246,4 +250,18 @@ Route::post('/uploadcare-test', function (Request $request) {
 // Debug Uploadcare config
 Route::get('/debug-uploadcare', function () {
     dd(config('services.uploadcare'));
+});
+Route::get('/_debug/secure', function () {
+    return response()->json([
+        'is_secure' => request()->isSecure(),
+        'scheme' => request()->getScheme(),
+        'proto' => request()->header('x-forwarded-proto'),
+    ]);
+});
+Route::get('/debug-session', function () {
+    return [
+        'session_started' => session()->isStarted(),
+        'token' => csrf_token(),
+        'session_id' => session()->getId(),
+    ];
 });

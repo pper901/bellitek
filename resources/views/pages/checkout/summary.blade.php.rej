@@ -1,0 +1,41 @@
+diff a/resources/views/pages/checkout/summary.blade.php b/resources/views/pages/checkout/summary.blade.php	(rejected hunks)
+@@ -182,9 +182,38 @@ class="w-full bg-green-600 text-white py-3 rounded-lg text-xl font-bold shadow-l
+                     </button>
+                 </form>
+ 
+-                <p class="text-xs text-gray-500 mt-4 text-center">
++                <p class="text-xs text-gray-500 mt-4 mb-4 text-center">
+                     By clicking 'Pay Now', you agree to the terms and conditions.
+                 </p>
++                <div class="p-5 bg-white rounded-xl shadow border border-gray-200 space-y-4">
++                    <div class="flex items-start space-x-3">
++                        <div class="p-2 bg-yellow-100 rounded-lg">
++                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
++                            </svg>
++                        </div>
++                        <div>
++                            <h4 class="text-sm font-bold text-gray-800 uppercase tracking-tight">Delivery Estimate</h4>
++                            <p class="text-sm text-gray-600 font-medium">5 - 14 Business Days</p>
++                        </div>
++                    </div>
++
++                    <hr class="border-gray-100">
++
++                    <div class="flex items-start space-x-3">
++                        <div class="p-2 bg-purple-100 rounded-lg">
++                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
++                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
++                            </svg>
++                        </div>
++                        <div>
++                            <h4 class="text-sm font-bold text-gray-800 uppercase tracking-tight">Return Policy</h4>
++                            <p class="text-xs text-gray-600 mt-1 leading-relaxed">
++                                Returns accepted within **3 days** of delivery. Goods must be in original condition with the **seal intact**.
++                            </p>
++                        </div>
++                    </div>
++                </div>
+             </div>
+         </div>
+ 

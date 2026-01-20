@@ -1,28 +1,31 @@
 <IfModule mod_rewrite.c>
-    RewriteEngine On
-
-    # Force HTTPS
-    RewriteCond %{HTTPS} !=on
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
 
-    # Handle Authorization Header
+    RewriteEngine On
+
+    # 1. FIX THE REDIRECT LOOP
+    # We remove the "Force HTTPS" block that was here before.
+    # Nginx handles the SSL; Apache just needs to process the request.
+
+    # 2. HANDLE AUTHORIZATION HEADER
+    # Ensures Laravel can see "Bearer" tokens for API or Login sessions
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Handle X-XSRF-Token Header
-    RewriteCond %{HTTP:x-xsrf-token} .
-    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+    # 3. FIX FOR 419 PAGE EXPIRED (Forwarded Headers)
+    # This ensures Apache recognizes the secure signal from your Nginx Proxy
+    SetEnvIf X-Forwarded-Proto "https" HTTPS=on
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # 4. REDIRECT TRAILING SLASHES
+    # Removes trailing slashes from URLs (except for actual folders)
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
+    # 5. SEND REQUESTS TO FRONT CONTROLLER (index.php)
+    # This is the core of Laravel routing
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
