@@ -10,7 +10,7 @@ class Guide extends Model
 {
     protected $fillable = [
         'device', 'category', 'brand', 'series', 'model', 'issue',
-    'issue_slug',
+    'issue_slug','youtube_url',
     ];
 
     public function resources()

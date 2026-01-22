@@ -54,6 +54,7 @@
             + Add Cause & Solution
         </button>
 
+
         <button type="submit"
             class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 ease-in-out shadow-xl">
             Save Guide
@@ -93,6 +94,20 @@ function getResourceHtml(index) {
                               placeholder="Write detailed troubleshooting steps…"></textarea>
                 </div>
 
+            </div>
+            
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700">
+                    YouTube Video (optional)
+                </label>
+                <input
+                    name="youtube_url"
+                    class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                    placeholder="https://www.youtube.com/watch?v=xxxx"
+                >
+                <p class="text-xs text-gray-500 mt-1">
+                    Paste a normal YouTube link. It will be embedded automatically.
+                </p>
             </div>
         </div>
     `;

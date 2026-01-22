@@ -22,34 +22,38 @@ class GuideController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Filter and create the main Guide record
+        // 1. Validate input including youtube_url
+        $request->validate([
+            'device' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'brand' => 'required|string|max:255',
+            'series' => 'nullable|string|max:255',
+            'model' => 'required|string|max:255',
+            'issue' => 'required|string|max:255',
+            'youtube_url' => 'nullable|url', // <-- NEW
+        ]);
+
+        // 2. Filter and create the main Guide record
         $guideData = $request->only([
-            'device', 'category', 'brand', 'series', 'model', 'issue'
+            'device', 'category', 'brand', 'series', 'model', 'issue', 'youtube_url' // <-- NEW
         ]);
 
         $guideData['issue_slug'] = Str::slug($request->issue);
-        
-        $guide = Guide::create($guideData); 
 
-        // 2. CRITICAL FIX: Check if the 'resources' key exists and is an array 
-        // before attempting to loop over it. This prevents the 500 error 
-        // if no resource fields were added.
+        $guide = Guide::create($guideData);
+
+        // 3. Create resources if present
         if ($request->has('resources') && is_array($request->resources)) {
-            
-            // Define the fields allowed in the GuideResource model's $fillable array
             $resourceFillables = ['cause', 'solution', 'details'];
-            
             foreach ($request->resources as $res) {
-                
-                // Filter the resource data for Mass Assignment protection
                 $resourceData = array_intersect_key($res, array_flip($resourceFillables));
-                
                 $guide->resources()->create($resourceData);
             }
         }
-        
+
         return redirect()->route('admin.guides.index');
     }
+
 
     public function edit(Guide $guide)
     {
@@ -58,19 +62,30 @@ class GuideController extends Controller
 
     public function update(Request $request, Guide $guide)
     {
-       $guide->update([
+        $request->validate([
+            'device' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'brand' => 'required|string|max:255',
+            'series' => 'nullable|string|max:255',
+            'model' => 'required|string|max:255',
+            'issue' => 'required|string|max:255',
+            'youtube_url' => 'nullable|url', // <-- NEW
+        ]);
+
+        $guide->update([
             'device'     => $request->device,
             'category'   => $request->category,
             'brand'      => $request->brand,
             'series'     => $request->series,
             'model'      => $request->model,
             'issue'      => $request->issue,
-            'issue_slug' => \Str::slug($request->issue),
+            'youtube_url'=> $request->youtube_url, // <-- NEW
+            'issue_slug' => Str::slug($request->issue),
         ]);
 
-
+        // Delete old resources and recreate
         $guide->resources()->delete();
-        
+
         if ($request->has('resources') && is_array($request->resources)) {
             $resourceFillables = ['cause', 'solution', 'details'];
             foreach ($request->resources as $res) {
@@ -81,6 +96,7 @@ class GuideController extends Controller
 
         return redirect()->route('admin.guides.index');
     }
+
 
     public function devices()
     {

@@ -94,6 +94,21 @@
                 @endforeach
             </div>
         </div>
+        @if ($guide->youtube_url)
+            @php $videoId = youtubeEmbedUrl($guide->youtube_url); @endphp
+
+            @if ($videoId)
+                <div class="mb-12 bg-black rounded-2xl overflow-hidden shadow-xl">
+                    <iframe
+                        src="{{ $videoId }}"
+                        class="w-full h-[360px] md:h-[480px]"
+                        frameborder="0"
+                        allowfullscreen
+                    ></iframe>
+                </div>
+            @endif
+        @endif
+
 
     @else
 

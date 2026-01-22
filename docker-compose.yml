@@ -21,6 +21,13 @@ services:
       APP_URL: https://bellitek.com.ng
       ASSET_URL: https://bellitek.com.ng
 
+      # APP_NAME: Bellitek
+      # APP_ENV: local                             # Changed to 'local' for development
+      # APP_KEY: base64:Zi/HmT3/DKlJFBliXnk9ocAlN0eEg6l/FpWGYdFI/W8=
+      # APP_DEBUG: true                            # Changed to 'true' to see errors
+      # APP_URL: http://localhost:8000             # Changed to local URL
+      # VITE_APP_URL: http://localhost:8000 
+
       # Database
       DB_CONNECTION: pgsql
       DB_HOST: db

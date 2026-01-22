@@ -75,6 +75,23 @@
                         </div>
                     </div>
                 </div>
+                @if ($guide->youtube_url)
+                    @php $videoId = youtubeEmbedUrl($guide->youtube_url); @endphp
+
+                    @if ($videoId)
+                        <div class="border rounded-xl overflow-hidden shadow-lg">
+                            <div class="aspect-w-16 aspect-h-9">
+                                <iframe
+                                    src="{{ $videoId }}"
+                                    class="w-full h-[420px]"
+                                    frameborder="0"
+                                    allowfullscreen
+                                ></iframe>
+                            </div>
+                        </div>
+                    @endif
+                @endif
+
             @empty
                 <p class="text-gray-500 italic p-4 border border-dashed rounded-lg text-center">No causes or solutions added.</p>
             @endforelse
