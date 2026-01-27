@@ -160,7 +160,7 @@
 </nav>
 
 {{-- CRITICAL FIX: Added flex-grow to make this element fill all remaining vertical space --}}
-<main class="pt-[76px] flex-grow"> {{-- Adjusted pt-24 to pt-[76px] to account for fixed navbar height --}}
+<main class="pt-[66px] flex-grow"> {{-- Adjusted pt-24 to pt-[76px] to account for fixed navbar height --}}
     @yield('content')
 </main>
 
