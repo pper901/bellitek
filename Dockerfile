@@ -5,6 +5,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip libpng-dev libonig-dev libxml2-dev libpq-dev zip curl \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install intl
+
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo pdo_pgsql
 
 # Apache config

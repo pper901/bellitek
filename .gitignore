@@ -22,3 +22,9 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# Server backups
+db_backups/
+*.sql
+*.dump
+db_backup.sh
+bootstrap/app.php.broken

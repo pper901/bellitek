@@ -16,7 +16,7 @@ services:
 
     environment:
       APP_ENV: production
-      APP_KEY: base64:7O6J+Y7VZ8Vp1oLfwMWpLAYMd0bM+dkW6t1f2ZBbw0g=
+      APP_KEY: base64:z0SyXF9I9F1rWpGKP9z2djYBgvHni6Se10nUQhGLRR4=
       APP_DEBUG: "false"
       APP_URL: https://bellitek.com.ng
       ASSET_URL: https://bellitek.com.ng
@@ -36,6 +36,10 @@ services:
       DB_USERNAME: bellitek_user
       DB_PASSWORD: strongpassword
 
+      LOG_CHANNEL: stack
+      LOG_STACK: single
+      LOG_LEVEL: debug
+
       # Sessions (419-safe)
       SESSION_DRIVER: database
       SESSION_DOMAIN: .bellitek.com.ng
@@ -51,6 +55,8 @@ services:
     volumes:
       # Persist Laravel runtime state only
       - bellitek_app_storage:/var/www/app/storage
+      - ./storage/logs:/var/www/app/storage/logs
+
 
   db:
     image: postgres:16
@@ -64,8 +70,8 @@ services:
 
     # OPTIONAL: expose only if you really need external DB access
     # Recommended to REMOVE in production
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
     volumes:
       # This is the ONLY place Postgres data lives
