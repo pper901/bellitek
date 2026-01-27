@@ -2,28 +2,32 @@
 
 @section('content')
 
-<section class="text-center py-20 bg-gradient-to-r from-blue-600 to-red-500 text-white">
-<h1 class="text-5xl font-bold mb-4">We Fix. You Relax.</h1>
-<p class="text-lg mb-6">Laptop & Phone Repairs | Affordable Devices | ICT Solutions</p>
+<section
+    class="relative text-center py-20 text-white bg-cover bg-center"
+    style="background-image: url('https://5to6o2z4j5.ucarecd.net/8c41370d-2659-4949-99d5-1e5318fd08d8/-/preview/1000x1000/');"
+>
+    <div class="absolute inset-0 bg-black/50"></div>
 
-<div class="flex justify-center space-x-4">
-    {{-- Primary CTA for existing repairs --}}
-    <a href="/repair/book" class="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition duration-150 shadow-lg">
-        Track Your Repair
-    </a>
+    <div class="relative z-10">
+        <h1 class="text-5xl font-bold mb-4">We Fix. You Relax.</h1>
+        <p class="text-lg mb-6">Laptop & Phone Repairs | Affordable Devices | ICT Solutions</p>
 
-    {{-- Authentication links removed from here, as requested --}}
-
-    @auth
-        @if(auth()->user()->role === 'admin')
-            <a href="{{ route('admin.dashboard') }}" class="bg-green-600 px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition duration-150 shadow-lg">
-                Go to Admin Dashboard
+        <div class="flex justify-center space-x-4">
+            <a href="/repair/book"
+               class="bg-white text-blue-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition duration-150 shadow-lg">
+                Track Your Repair
             </a>
-        @endif
-    @endauth
-</div>
 
-
+            @auth
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.dashboard') }}"
+                       class="bg-green-600 px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition duration-150 shadow-lg">
+                        Go to Admin Dashboard
+                    </a>
+                @endif
+            @endauth
+        </div>
+    </div>
 </section>
 
 <section class="max-w-6xl mx-auto py-16 grid md:grid-cols-3 gap-8 text-center">
