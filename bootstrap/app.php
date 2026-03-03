@@ -6,7 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 
 //C:\\Users\\USER\\Documents\\Bellifix\\bellifix
 ///var/www/app
-return Application::configure(basePath: '/var/www/app')
+return Application::configure(basePath: 'C:\\Users\\USER\\Documents\\Bellifix\\bellifix')
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -16,6 +16,7 @@ return Application::configure(basePath: '/var/www/app')
 	$middleware->trustProxies(at: '*');
         $middleware->alias([
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'lecturer' => \App\Http\Middleware\IsLecturer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -19,7 +19,12 @@ use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ClassroomHomeController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\StudentClassController;
+use App\Http\Controllers\LecturerEntryController;
+use App\Http\Controllers\LecturerController;
+use App\Http\Controllers\ClassController;
 use Illuminate\Http\Request;
 // use Uploadcare\Api;
 use Illuminate\Support\Facades\Http;
@@ -115,9 +120,41 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/auth.php';
 
 
+
 Route::get('/', [PageController::class, 'home'])->name('home');
 Route::get('/services', [PageController::class, 'services'])->name('services');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+
+
+
+//Classroom links
+Route::get('/classroom', [ClassroomHomeController::class, 'index'])->name('classroom.home');
+Route::get('/classroom/lecturer', LecturerEntryController::class)->name('lecturer.login');
+Route::post('/classroom/lecturer/become', function () {
+    auth()->user()->update(['is_lecturer' => true]);
+
+    return redirect()->route('lecturer.dashboard');
+})->middleware('auth')->name('lecturer.become');
+
+Route::get('/classroom/student', [StudentClassController::class, 'join'])->name('student.join');
+Route::get('/classroom/student/{uuid}',[StudentClassController::class, 'enter'])->name('student.class.enter');
+
+
+Route::middleware(['auth', 'lecturer'])->group(function () {
+
+    Route::get('/lecturer/dashboard', [LecturerController::class, 'index'])->name('lecturer.dashboard');
+
+    Route::get('/lecturer/classes/create', [ClassController::class, 'create'])->name('lecturer.classes.create');
+    Route::get('/lecturer/classes/{classroom}', [ClassController::class, 'show'])->name('lecturer.classes.show');
+    Route::post('/lecturer/classes/{class}/end', [ClassController::class, 'end'])->name('lecturer.classes.end');
+    Route::post('/lecturer/classes/{class}/restart', [ClassController::class, 'restart'])->name('lecturer.classes.restart');
+    Route::delete('/lecturer/classes/{class}', [ClassController::class, 'destroy'])->name('lecturer.classes.destroy');
+
+    Route::post('/lecturer/classes', [ClassController::class, 'store'])->name('lecturer.classes.store');
+
+});
+
+
 // In routes/api.php or web.php (without 'web' middleware for CSRF)
 Route::post('/webhooks/shipbubble', [WebhookController::class, 'handleShipbubbleNotification']);
 

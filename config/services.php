@@ -50,4 +50,7 @@ return [
         'key' => env('PAYSTACK_SECRET'),
     ],
 
+    'generalclass' => [
+        'url' => 'http://localhost:8090'
+    ],
 ];

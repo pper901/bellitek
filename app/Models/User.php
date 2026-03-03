@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Repair;
-use App\Models\WarehouseSetting; // <-- Import the new model
+use App\Models\WarehouseSetting; 
+use App\Models\Classroom;
 
 class User extends Authenticatable
 {
@@ -24,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'is_lecturer',
     ];
 
     /**
@@ -47,6 +49,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_lecturer' => 'boolean',
         ];
     }
     
@@ -87,5 +90,10 @@ class User extends Authenticatable
     public function repairs()
     {
         return $this->hasMany(Repair::class);
+    }
+
+    public function classrooms()
+    {
+        return $this->hasMany(Classroom::class, 'lecturer_id');
     }
 }

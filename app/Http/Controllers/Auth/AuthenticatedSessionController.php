@@ -26,15 +26,25 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        // IMPORTANT: regenerate session immediately
         $request->session()->regenerate();
+
+        // Lecturer intent handling
+        if (session('intended_role') === 'lecturer') {
+            session()->forget('intended_role');
+            return redirect()->route('lecturer.login');
+        }
+
+        // Admin handling
         if (auth()->user()->is_admin) {
-                logger('Login success', ['user' => auth()->user()]);
-                return redirect()->route('admin.dashboard');
-            } else {
-                // Normal user → redirect back to previous page
-                return redirect()->intended();
-            }
+            logger('Login success', ['user' => auth()->user()->id]);
+            return redirect()->route('admin.dashboard');
+        }
+
+        // Normal users → intended URL or fallback
+        return redirect()->intended(route('home'));
     }
+
 
     /**
      * Destroy an authenticated session.
