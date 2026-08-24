@@ -8,7 +8,7 @@
     </h1>
 
     <p class="text-gray-600 mb-8">
-        You’re about to enable lecturer access and create classes.
+        You’re about to enable lecturer access and create classes. 
     </p>
 
     <form method="POST" action="{{ route('lecturer.become') }}">

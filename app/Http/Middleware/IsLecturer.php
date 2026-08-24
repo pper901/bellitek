@@ -24,6 +24,9 @@ class IsLecturer
         if (!auth()->user()->is_lecturer) {
             abort(403, 'Lecturer access only');
         }
+        if (auth()->user()->is_lecturer && !auth()->user()->is_approve) {
+            return redirect()->route('lecturer.pending');
+        }
 
         return $next($request);
     }

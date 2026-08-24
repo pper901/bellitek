@@ -77,7 +77,7 @@
         socket = new WebSocket("wss://"+host+":8443/ws");
       }else{
         console.log("using less secure sever");
-        socket = new WebSocket("ws://"+host+":8081/ws");
+        socket = new WebSocket("ws://"+host+":8090/ws");
       }
   
   
@@ -707,9 +707,21 @@ function showAllFileResources(files) {
       const hang = document.createElement("button");
       hang.setAttribute("id", "hangupButton");
       hang.title = "Hangup";  // Use '=' to set the title property
-      hang.textContent = "Hangup";  // Use '=' to set the text content
+      hang.textContent = "Hangup";  
       box.appendChild(hang);
         
+      // Variable to hold display stream
+      let screenStream = null;
+
+      // Create "Share Screen" button
+      const shareBtn = document.createElement("button");
+      shareBtn.setAttribute("id", "shareScreenBtn");
+      shareBtn.title = "Share Screen";
+      shareBtn.textContent = "Share Screen";
+      shareBtn.disabled = true; 
+      box.appendChild(shareBtn);
+
+      shareBtn.onclick = toggleScreenShare;
       
       const startButton = document.getElementById('startButton');
       const hangupButton = document.getElementById('hangupButton');
@@ -733,8 +745,22 @@ function showAllFileResources(files) {
       
       
       startButton.onclick = async () => {
-          try {
-            let lStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true } , video: true });
+        try {
+              const constraints = {
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              },
+              video: {
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                frameRate: { ideal: 60, max: 120 },
+                facingMode: "user"
+              }
+            };
+
+            let lStream = await navigator.mediaDevices.getUserMedia(constraints);
             localStream = lStream;
             // Create a new MediaStream containing only the video track
             const videoStream = new MediaStream([localStream.getVideoTracks()[0]]);
@@ -743,7 +769,9 @@ function showAllFileResources(files) {
             localVideo.play();
         
             startButton.disabled = true;
+            startButton.style.color = "grey";
             hangupButton.disabled = false;
+            shareBtn.disabled = false;
             if(clientQueue.length > 0){
               for(let i = 0; i < clientQueue.length; i++){
                 let jClient = clientQueue[i];
@@ -779,7 +807,79 @@ function showAllFileResources(files) {
           localStream = null;
           startButton.disabled = false;
           hangupButton.disabled = true;
+          shareBtn.disabled = true;
         };
+
+        async function toggleScreenShare() {
+          try {
+            if (!screenStream) {
+              // 1. Capture screen video only
+              screenStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: false // Audio stays on microphone stream
+              });
+
+              const screenVideoTrack = screenStream.getVideoTracks()[0];
+
+              // 2. Replace video track across all active RTCPeerConnections
+              rtcQueue.forEach(item => {
+                const pc = item.peer;
+                const senders = pc.getSenders();
+                const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                if (videoSender) {
+                  videoSender.replaceTrack(screenVideoTrack);
+                }
+              });
+
+              // 3. Update local video UI preview
+              localVideo.srcObject = new MediaStream([screenVideoTrack]);
+              localVideo.style.transform = "none"; // Remove mirror effect for screen
+              shareBtn.textContent = "Stop Sharing";
+
+              // 4. Handle user stopping share via browser native UI bar
+              screenVideoTrack.onended = () => {
+                stopScreenShare();
+              };
+
+            } else {
+              stopScreenShare();
+            }
+          } catch (error) {
+            console.error("Error capturing screen share:", error);
+          }
+        }
+
+        async function stopScreenShare() {
+          if (!localStream) return;
+
+          const cameraVideoTrack = localStream.getVideoTracks()[0];
+
+          // 1. Revert track across all active connections
+          rtcQueue.forEach(item => {
+            const pc = item.peer;
+            const senders = pc.getSenders();
+            const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+            if (videoSender && cameraVideoTrack) {
+              videoSender.replaceTrack(cameraVideoTrack);
+            }
+          });
+
+          // 2. Stop screen tracks
+          if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+          }
+
+          // 3. Reset local preview UI
+          localVideo.srcObject = localStream; // Use full localStream directly
+          // localVideo.muted = true;             // Prevent local feedback & state block
+          localVideo.style.transform = "scaleX(-1)"; // Re-apply mirror effect
+
+          // Force the browser video element to re-render and play
+          await localVideo.play();
+          
+          shareBtn.textContent = "Share Screen";
+        }
   
       async function createPeerConnection(sender, name) {
           const pc = new RTCPeerConnection(configuration);
@@ -824,22 +924,66 @@ function showAllFileResources(files) {
           console.log("adding new peer to queue");
           rtcQueue.push(newPeerJson);
   
-          localStream.getTracks().forEach(track => {
-            console.log("The track id for lecturer is ", track.id);
-            pc.addTrack(track, localStream);
-          });
+          // localStream.getTracks().forEach(track => {
+          //   console.log("The track id for lecturer is ", track.id);
+          //   pc.addTrack(track, localStream);
+          // });
+            if (localStream) {
+              const audioTrack = localStream.getAudioTracks()[0];
+              const cameraVideoTrack = localStream.getVideoTracks()[0];
+              
+              // Use screen video track if sharing, otherwise fallback to camera video track
+              const currentVideoTrack = (screenStream && screenStream.getVideoTracks().length > 0)
+                  ? screenStream.getVideoTracks()[0] 
+                  : cameraVideoTrack;
+
+              // Add audio and current active video track
+              if (audioTrack) pc.addTrack(audioTrack, localStream);
+              if (currentVideoTrack) {
+                  // Note: pass the stream the track actually belongs to
+                  const activeStream = screenStream || localStream;
+                  pc.addTrack(currentVideoTrack, activeStream);
+                  await optimizeEncoding(pc);
+              }
+          } else {
+              console.warn("localStream is not initialized yet. Call will proceed without local tracks.");
+          }
           makeCall(sender, pc);
         }
       async function makeCall(sender, pc) {
         console.log("Tracks before offer:");
-            pc.getSenders().forEach(s => {
-                console.log("Sender track:", s.track?.kind);
-            });
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            console.log("Sending Offer..."+"Offer: "+JSON.stringify({type: offer.type, sdp: offer.sdp}));
-            socket.send(JSON.stringify({id: id, classUuid: classUuid, sender: sender, type: offer.type, sdp: offer.sdp , title: "lecturer", name: nm}));
-          }
+        pc.getSenders().forEach(s => {
+          console.log("Sender track:", s.track?.kind);
+        });
+
+        // 1. Create the base offer
+        const offer = await pc.createOffer();
+
+        // 2. Modify the SDP using preferCodec
+        const modifiedSdp = preferCodec(offer.sdp, 'H264');
+
+        // 3. Create a new RTCSessionDescription containing the modified SDP
+        const modifiedOffer = new RTCSessionDescription({
+          type: offer.type,
+          sdp: modifiedSdp
+        });
+
+        // 4. Set local description with the modified offer
+        await pc.setLocalDescription(modifiedOffer);
+
+        console.log("Sending Offer... Offer:", JSON.stringify({ type: modifiedOffer.type, sdp: modifiedOffer.sdp }));
+
+        // 5. Transmit modified SDP over WebSocket
+        socket.send(JSON.stringify({
+          id: id,
+          classUuid: classUuid,
+          sender: sender,
+          type: modifiedOffer.type,
+          sdp: modifiedOffer.sdp,
+          title: "lecturer",
+          name: nm
+        }));
+      }
   
         async function handleAnswer(answer) {
           console.log('Handling answer...');
@@ -885,6 +1029,61 @@ function showAllFileResources(files) {
                   }
               }
           }
+      }
+
+      // Call this on the sender side after adding tracks to the peer connection
+      async function optimizeEncoding(pc) {
+        const senders = pc.getSenders();
+        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+
+        if (videoSender) {
+          const parameters = videoSender.getParameters();
+          if (!parameters.encodings) {
+            parameters.encodings = [{}];
+          }
+          
+          // Set max bitrate to ~2.5 Mbps for 720p/1080p stream
+          parameters.encodings[0].maxBitrate = 2500000; 
+          parameters.encodings[0].degradationPreference = 'maintain-resolution'; // Prioritize clarity over framerate
+
+          try {
+            await videoSender.setParameters(parameters);
+            console.log("Video encoding parameters updated");
+          } catch (err) {
+            console.error("Failed to set encoding parameters:", err);
+          }
+        }
+      }
+
+      // Apply this function to your SDP offer/answer before setting local description
+      function preferCodec(sdp, codecName = 'H264') {
+        const lines = sdp.split('\r\n');
+        const mLineIndex = lines.findIndex(line => line.startsWith('m=video'));
+        if (mLineIndex === -1) return sdp;
+
+        // Re-order payload types to prioritize preferred codec
+        const payloadTypes = [];
+        const regex = new RegExp(`a=rtpmap:(\\d+) ${codecName}`, 'i');
+        
+        lines.forEach(line => {
+          const match = line.match(regex);
+          if (match) payloadTypes.push(match[1]);
+        });
+
+        if (payloadTypes.length > 0) {
+          const mLineElements = lines[mLineIndex].split(' ');
+          const header = mLineElements.slice(0, 3);
+          const existingPayloads = mLineElements.slice(3);
+          
+          const reorderedPayloads = [
+            ...payloadTypes,
+            ...existingPayloads.filter(pt => !payloadTypes.includes(pt))
+          ];
+          
+          lines[mLineIndex] = [...header, ...reorderedPayloads].join(' ');
+        }
+
+        return lines.join('\r\n');
       }
   
       let timer = setInterval(checkOffer,500);

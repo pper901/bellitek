@@ -7,6 +7,7 @@ use App\Models\ApiProvider;
 use App\Models\ApiCall;
 use App\Models\Expense;
 use App\Models\Order;
+use App\Models\OrderItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -29,7 +30,7 @@ class AccountingController extends Controller
                             ->where('payment_status', 'paid');
                     })
                     ->join('products', 'order_items.product_id', '=', 'products.id')
-                    ->selectRaw('SUM(order_items.quantity * products.purchase_price) as total_cost')
+                    ->selectRaw('SUM(order_items.qty * products.purchase_price) as total_cost')
                     ->value('total_cost') ?? 0;
 
         // 3. API cost aggregated

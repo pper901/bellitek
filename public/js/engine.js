@@ -80,7 +80,7 @@ console.log("data value is ",data);
     socket = new WebSocket("wss://"+host+":8443/ws");
   }else{
     console.log("using less secure sever");
-    socket = new WebSocket("ws://"+host+":8081/ws");
+    socket = new WebSocket("ws://"+host+":8090/ws");
   }
     
     
@@ -880,7 +880,20 @@ document.getElementById("reVideo1").setAttribute("id", "video");
   async function startRemoteStream(){
     console.log("Starting remote stream...");
     socket.send(JSON.stringify({id:id, classUuid: classUuid, ready:nm}));
-    let rStream = await navigator.mediaDevices.getUserMedia({ audio: {echoCancellation: true}, video: true });
+    const constraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+      video: {
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        frameRate: { ideal: 30, max: 60 },
+        facingMode: "user"
+      }
+    };
+    let rStream = await navigator.mediaDevices.getUserMedia(constraints);
     remoteStream = rStream;
   }
       
@@ -933,21 +946,48 @@ document.getElementById("reVideo1").setAttribute("id", "video");
           console.log("Track kind:", track.kind);
         }); 
     }
-    remoteStream.getTracks().forEach(track => {
-      console.log("The track id for student is ", track.id);
-      pc.addTrack(track, remoteStream);
-    });
+    if(remoteStream){
+        remoteStream.getTracks().forEach(track => {
+        console.log("The track id for student is ", track.id);
+        pc.addTrack(track, remoteStream);
+      });
+      await optimizeEncoding(pc);
+    }else {
+        console.error("Cannot add tracks: localStream is not ready!");
+        return;
+    }
     console.log("adding new peer to queue");
     rtcQueue.push(newPeerJson);
     await makeCall(sender, pc);
   }
 
   async function makeCall(sender, pc) {
-      const offer = await pc.createOffer();
-      console.log("Sending Offer..."+"Offer: "+JSON.stringify({type: offer.type, sdp: offer.sdp}));
-      socket.send(JSON.stringify({id: id, classUuid: classUuid, sender: sender, type: offer.type, sdp: offer.sdp , title: "student", name: nm}));
-      await pc.setLocalDescription(offer);
-    }
+    // 1. Create offer
+    const offer = await pc.createOffer();
+    
+    // 2. Munge SDP to prefer H264
+    const modifiedSdp = preferCodec(offer.sdp, 'H264');
+    const modifiedOffer = new RTCSessionDescription({
+      type: offer.type,
+      sdp: modifiedSdp
+    });
+
+    // 3. Set local description with munged offer
+    await pc.setLocalDescription(modifiedOffer);
+
+    console.log("Sending Offer... Offer: " + JSON.stringify({ type: modifiedOffer.type, sdp: modifiedOffer.sdp }));
+    
+    // 4. Transmit modified SDP over socket
+    socket.send(JSON.stringify({
+      id: id, 
+      classUuid: classUuid, 
+      sender: sender, 
+      type: modifiedOffer.type, 
+      sdp: modifiedOffer.sdp, 
+      title: "student", 
+      name: nm
+    }));
+  }
 
   async function handleOffer(offer){
     console.log("this is the offer before processing ", offer);
@@ -985,6 +1025,7 @@ document.getElementById("reVideo1").setAttribute("id", "video");
           player.onclick = async () => { 
             try {
               await localVideo.play();
+              localVideo.style.transform = "scaleX(-1)";
               console.log("Video playback started successfully");
               box.removeChild(player);
 
@@ -1003,19 +1044,41 @@ document.getElementById("reVideo1").setAttribute("id", "video");
     console.log("adding new peer to queue");
     rtcQueue.push(newPeerJson);
 
-    // Add tracks to the peer connection
-    remoteStream.getTracks().forEach(track => {
-      console.log("Adding track:", track.kind);
-      pc.addTrack(track, remoteStream);
-    });
+    if(remoteStream){
+      // Add tracks to the peer connection
+      remoteStream.getTracks().forEach(track => {
+        console.log("Adding track:", track.kind);
+        pc.addTrack(track, remoteStream);
+      });
+      
+      await optimizeEncoding(pc);
+    } else {
+        console.error("Cannot add tracks: localStream is not ready!");
+    }
       
     console.log("setting remote description for ", newPeerJson.name);
-      newPeerJson.peer.setRemoteDescription({type:offer.type, sdp:offer.sdp});
+      await newPeerJson.peer.setRemoteDescription({type:offer.type, sdp:offer.sdp});
       const answer = await pc.createAnswer();
-      console.log("Sending Answer: "+JSON.stringify({type: answer.type, sdp: answer.sdp}));
-      socket.send(JSON.stringify({id: id, classUuid: classUuid, type: 'answer', sdp: answer.sdp, sender: newPeerJson.id}));
-      await pc.setLocalDescription(answer);
-  }
+      // 2. Munge SDP to prefer H264 codec
+      const modifiedSdp = preferCodec(answer.sdp, 'H264');
+      const modifiedAnswer = new RTCSessionDescription({
+        type: answer.type,
+        sdp: modifiedSdp
+      });
+
+      // 3. Set local description and transmit over WebSocket
+      await pc.setLocalDescription(modifiedAnswer);
+      
+      console.log("Sending Answer: " + JSON.stringify({ type: modifiedAnswer.type, sdp: modifiedAnswer.sdp }));
+      socket.send(JSON.stringify({
+        id: id, 
+        classUuid: classUuid, 
+        type: 'answer', 
+        sdp: modifiedAnswer.sdp, 
+        sender: newPeerJson.id
+      }));
+    }
+
   async function iceListener(pc, sender){
     console.log("before the ice starts listening for candidates"); 
       pc.onicecandidate = e => {
@@ -1081,6 +1144,61 @@ document.getElementById("reVideo1").setAttribute("id", "video");
         }
     }
 }
+
+      // Call this on the sender side after adding tracks to the peer connection
+      async function optimizeEncoding(pc) {
+        const senders = pc.getSenders();
+        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+
+        if (videoSender) {
+          const parameters = videoSender.getParameters();
+          if (!parameters.encodings) {
+            parameters.encodings = [{}];
+          }
+          
+          // Set max bitrate to ~2.5 Mbps for 720p/1080p stream
+          parameters.encodings[0].maxBitrate = 2500000; 
+          parameters.encodings[0].degradationPreference = 'maintain-resolution'; // Prioritize clarity over framerate
+
+          try {
+            await videoSender.setParameters(parameters);
+            console.log("Video encoding parameters updated");
+          } catch (err) {
+            console.error("Failed to set encoding parameters:", err);
+          }
+        }
+      }
+
+      // Apply this function to your SDP offer/answer before setting local description
+      function preferCodec(sdp, codecName = 'H264') {
+        const lines = sdp.split('\r\n');
+        const mLineIndex = lines.findIndex(line => line.startsWith('m=video'));
+        if (mLineIndex === -1) return sdp;
+
+        // Re-order payload types to prioritize preferred codec
+        const payloadTypes = [];
+        const regex = new RegExp(`a=rtpmap:(\\d+) ${codecName}`, 'i');
+        
+        lines.forEach(line => {
+          const match = line.match(regex);
+          if (match) payloadTypes.push(match[1]);
+        });
+
+        if (payloadTypes.length > 0) {
+          const mLineElements = lines[mLineIndex].split(' ');
+          const header = mLineElements.slice(0, 3);
+          const existingPayloads = mLineElements.slice(3);
+          
+          const reorderedPayloads = [
+            ...payloadTypes,
+            ...existingPayloads.filter(pt => !payloadTypes.includes(pt))
+          ];
+          
+          lines[mLineIndex] = [...header, ...reorderedPayloads].join(' ');
+        }
+
+        return lines.join('\r\n');
+      }
 
 async function setMessage() {
   let fmessage = document.getElementById("message").value;

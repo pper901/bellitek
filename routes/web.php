@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Http\Controllers\PageController;
@@ -12,11 +11,15 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Admin\AdminRepairController;
+use App\Http\Controllers\Admin\BlacklistController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\ApiCallController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\AccountingController;
+use App\Http\Controllers\Admin\AdminLecturerController;
+use App\Http\Controllers\Admin\AdminTelemetryController;
+use App\Http\Controllers\Admin\SecurityTelemetryController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClassroomHomeController;
@@ -47,10 +50,133 @@ use Illuminate\Support\Facades\Route;
         Route::post('/warehouse', [WarehouseController::class, 'storeAgain'])->name('warehouse.storeAgain');
         Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
         Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/telemetry', [AdminTelemetryController::class, 'index'])->name('telemetry');
         Route::post('/orders/{order}/retry-shipping', [AdminOrderController::class, 'retryShipping'])->name('orders.retry-shipping');
+        
+        // All lecturers + search/filter
+        Route::get('/lecturers', [AdminLecturerController::class, 'index'])->name('lecturers');
+        // Lecturers awaiting approval
+        Route::get('/lecturers/pending', [AdminLecturerController::class, 'pending'])->name('lecturers.pending');
+        // View lecturer information
+        Route::get('/lecturers/{lecturer}', [AdminLecturerController::class, 'show'])->name('lecturers.show');
+        Route::post('/lecturers/{lecturer}/approve', [AdminLecturerController::class, 'approve'])->name('lecturers.approve');
+
+        //Telemtry
+        Route::get('/telemetry/java-health', [AdminTelemetryController::class, 'javaHealth'])->name('telemetry.java-health');
+        Route::get('/telemetry', [AdminTelemetryController::class,'index'])->name('telemetry');
+        Route::get('/telemetry/websocket-config', [AdminTelemetryController::class,'websocketConfig'])->name('telemetry.websocket-config');
+        Route::get('/telemetry/websocket-stats', [ AdminTelemetryController::class, 'websocketStats'])->name('telemetry.websocket-stats');
+        Route::get('/telemetry/websocket-connections', [AdminTelemetryController::class, 'activeConnections'])->name('telemetry.websocket-connections');
+        Route::get('/telemetry/websocket-events', [AdminTelemetryController::class, 'websocketEvents'])->name('telemetry.websocket-events');
+        Route::get('/telemetry/system', [AdminTelemetryController::class, 'systemTelemetry'])->name('telemetry.system');
+        Route::get('/telemetry/errors', [AdminTelemetryController::class, 'errors'])->name('telemetry.errors');
+        Route::get('/telemetry/error-stats', [AdminTelemetryController::class, 'errorStats'])->name('telemetry.error-stats');
 
 
+        Route::prefix('telemetry/security')
+            ->name('telemetry.security.')
+            ->group(function () {
 
+                Route::get(
+                    '/',
+                    [SecurityTelemetryController::class, 'index']
+                )->name('index');
+
+                Route::get(
+                    '/stats',
+                    [SecurityTelemetryController::class, 'stats']
+                )->name('stats');
+
+                Route::get(
+                    '/events',
+                    [SecurityTelemetryController::class, 'events']
+                )->name('events');
+
+                /*
+                |--------------------------------------------------------------------------
+                | SECURITY BLACKLIST
+                |--------------------------------------------------------------------------
+                */
+
+                Route::prefix('/blacklist')
+                    ->name('blacklist.')
+                    ->group(function () {
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | Dashboard
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/',
+                            [BlacklistController::class, 'index']
+                        )->name('index');
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | List
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/list',
+                            [BlacklistController::class, 'list']
+                        )->name('list');
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | Add IP
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::post(
+                            '/',
+                            [BlacklistController::class, 'store']
+                        )->name('store');
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | Activate
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::patch(
+                            '/{blacklistedIp}/activate',
+                            [BlacklistController::class, 'activate']
+                        )->name('activate');
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | Deactivate
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::patch(
+                            '/{blacklistedIp}/deactivate',
+                            [BlacklistController::class, 'deactivate']
+                        )->name('deactivate');
+
+
+                        /*
+                        |----------------------------------------------------------------------
+                        | Permanently delete
+                        |----------------------------------------------------------------------
+                        */
+
+                        Route::delete(
+                            '/{blacklistedIp}',
+                            [BlacklistController::class, 'destroy']
+                        )->name('destroy');
+
+                    });
+            });
+
+            
 
         // Guides CRUD
         Route::prefix('guides')->name('guides.')->group(function () {
@@ -116,8 +242,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-
-    require __DIR__.'/auth.php';
+require __DIR__.'/auth.php';
 
 
 
@@ -133,9 +258,15 @@ Route::get('/classroom/lecturer', LecturerEntryController::class)->name('lecture
 Route::post('/classroom/lecturer/become', function () {
     auth()->user()->update(['is_lecturer' => true]);
 
-    return redirect()->route('lecturer.dashboard');
+    return redirect()->route('lecturer.pending');
 })->middleware('auth')->name('lecturer.become');
 
+ // Lecturer approval pending page
+Route::middleware('auth')->group(function () {
+    Route::get('/lecturer/pending', function () {
+        return view('pages.classroom.lecturer-pending');
+    })->name('lecturer.pending');
+});
 Route::get('/classroom/student', [StudentClassController::class, 'join'])->name('student.join');
 Route::get('/classroom/student/{uuid}',[StudentClassController::class, 'enter'])->name('student.class.enter');
 
@@ -143,6 +274,7 @@ Route::get('/classroom/student/{uuid}',[StudentClassController::class, 'enter'])
 Route::middleware(['auth', 'lecturer'])->group(function () {
 
     Route::get('/lecturer/dashboard', [LecturerController::class, 'index'])->name('lecturer.dashboard');
+    Route::get('/lecturer/websocket-health', [LecturerController::class,'websocketHealth'])->name('lecturer.websocket.health');
 
     Route::get('/lecturer/classes/create', [ClassController::class, 'create'])->name('lecturer.classes.create');
     Route::get('/lecturer/classes/{classroom}', [ClassController::class, 'show'])->name('lecturer.classes.show');

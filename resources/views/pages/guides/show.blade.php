@@ -152,7 +152,7 @@
         {{-- Added Login Logic below --}}
         <div class="mt-10">
             @auth
-                <form action="{{ route('reviews.store') }}" method="POST" class="space-y-4">
+                <form action="{{ route('guides.review.store', $guide) }}" method="POST" class="space-y-4">
                     @csrf
                     <input type="hidden" name="guide_id" value="{{ $guide->id }}">
 

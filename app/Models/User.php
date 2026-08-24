@@ -96,4 +96,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Classroom::class, 'lecturer_id');
     }
+
+    public function activeWebSocketConnections(): HasMany
+    {
+        return $this->hasMany(ActiveWebSocketConnection::class);
+    }
+
+    public function websocketEvents(): HasMany
+    {
+        return $this->hasMany(WebSocketEvent::class);
+    }
 }

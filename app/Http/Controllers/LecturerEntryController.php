@@ -17,9 +17,13 @@ class LecturerEntryController extends Controller
         $user = auth()->user();
 
         // Already a lecturer → dashboard
-        if ($user->is_lecturer) {
+        if ($user->is_lecturer && $user->is_approve) {
             return redirect()->route('lecturer.dashboard');
         }
+        // Lecturer but not yet approved
+        // if ($user->is_lecturer && !$user->is_approve) {
+        //     return redirect()->route('lecturer.pending');
+        // }
 
         // Logged in but not lecturer → confirmation page
         return view('pages.classroom.request-lecturer');
