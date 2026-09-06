@@ -142,9 +142,10 @@ class ClassController extends Controller
         $response = Http::timeout(5)
             ->acceptJson()
             ->post(
-                config('services.generalclass.url') . '/api/classes/start',
+                config('services.generalclass.url') . '/api/classes/restart',
                 [
                     'lecturer_id' => auth()->id(),
+                    'uuid'        => $class->uuid,
                 ]
             );
 
@@ -157,7 +158,6 @@ class ClassController extends Controller
         $data = $response->json();
 
         $class->update([
-            'uuid' => $data['uuid'], // new session UUID
             'is_active' => true,
         ]);
 

@@ -1,0 +1,26 @@
+# Stale compiled/cached files — must be regenerated inside the container
+bootstrap/cache/*.php
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+storage/logs/*.log
+
+# Don't ship your local vendor/node_modules — installed fresh in the image
+vendor/
+node_modules/
+
+# Env files — never bake secrets into the image; env vars come from docker-compose.yml
+# .env
+# .env.*
+
+# VCS and editor junk
+.git
+.gitignore
+.idea
+.vscode
+
+# Docker-related files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -29,6 +29,7 @@ use App\Http\Controllers\LecturerEntryController;
 use App\Http\Controllers\LecturerController;
 use App\Http\Controllers\ClassController;
 use Illuminate\Http\Request;
+use App\Http\Controllers\ClassroomResourceController;
 // use Uploadcare\Api;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -283,6 +284,11 @@ Route::middleware(['auth', 'lecturer'])->group(function () {
     Route::delete('/lecturer/classes/{class}', [ClassController::class, 'destroy'])->name('lecturer.classes.destroy');
 
     Route::post('/lecturer/classes', [ClassController::class, 'store'])->name('lecturer.classes.store');
+    // Upload a resource to a classroom
+    Route::post('/classroom/resources/upload', [ClassroomResourceController::class, 'store'])->name('classroom.resources.store');
+
+    // Retrieve all resources for a specific classroom
+    Route::get('/classroom/resources/{classUuid}', [ClassroomResourceController::class, 'index'])->name('classroom.resources.index');
 
 });
 

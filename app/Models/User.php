@@ -106,4 +106,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(WebSocketEvent::class);
     }
+    
+    /**
+     * Get all resources uploaded by this user.
+     */
+    public function classroomResources(): HasMany
+    {
+        return $this->hasMany(ClassroomResource::class, 'user_id');
+    }
 }

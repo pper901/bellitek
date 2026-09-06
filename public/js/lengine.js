@@ -459,48 +459,192 @@ function updateEditorQueue(){
     } 
   }
 }
-function showAllFileResources(files) {
-  console.log("clicked on the resource library");
-  if (event.target === modal && modal.contains(resModal)) {
-    console.log()
-      modal.removeChild(resModal);
+
+function showAllFileResources(data) {
+  console.log("Rendering resource library for folder:", data.currentFolder);
+
+  let modal = document.querySelector(".modal-panel");
+  
+  // Clean up previous modal instance if re-rendered from root
+  let existingModal = document.querySelector(".res-modal");
+  if (existingModal) {
+    modal.removeChild(existingModal);
   }
-  let allFiles = files.split(";");
+
   let resModal = document.createElement("div");
   resModal.className = "res-modal";
-  let modal = document.querySelector(".modal-panel");
 
-  allFiles.forEach(file => {
-      var holdFile = document.createElement("p");
-      holdFile.className = "res-name";
-      holdFile.textContent = file;
-      holdFile.addEventListener("click", function(event) {
-          event.stopPropagation();
-          let fileArr = holdFile.textContent.split(".");
-          if (fileArr.length === 1) {
-              // this is a folder, so open the folder
-              socket.send(JSON.stringify({ id: id, classUuid: classUuid, getAllFileResource: fileArr[0] }));
-          } else {
-              let webDevExt = ['html', 'js', 'css', 'txt'];
-              if (webDevExt.includes(fileArr[1])) {
-                  socket.send(JSON.stringify({ id: id, classUuid: classUuid, getFileContent: holdFile.textContent.trim() }));
-              } else {
-                  alert("unsupported file format");
-              }
-          }
-          modal.removeChild(resModal);
-      });
-  });
+  // Attach elements directly to the root container
+  appendFolderContents(resModal, data);
 
   modal.appendChild(resModal);
 
-  modal.addEventListener("click", function(event) {
-      if (event.target === modal && modal.contains(resModal)) {
-        console.log()
-          modal.removeChild(resModal);
-      }
+  // Close modal backdrop click handler
+  modal.addEventListener("click", function handleModalClose(event) {
+    if (event.target === modal && modal.contains(resModal)) {
+      modal.removeChild(resModal);
+      modal.removeEventListener("click", handleModalClose);
+    }
   });
-  resModal.addE
+}
+
+/**
+ * Renders files and subfolders inside a parent container element
+ */
+function appendFolderContents(parentContainer, data) {
+  // 1. Render Subfolders
+  if (data.folders && data.folders.length > 0) {
+    data.folders.forEach(folderName => {
+      // Wrapper for folder header + dropdown sub-container
+      let folderWrapper = document.createElement("div");
+      folderWrapper.className = "folder-wrapper";
+
+      // Folder Header Bar
+      let folderHeader = document.createElement("div");
+      folderHeader.className = "res-name folder-item";
+      folderHeader.style.display = "flex";
+      folderHeader.style.alignItems = "center";
+      folderHeader.style.cursor = "pointer";
+
+      // Dropdown Indicator Button
+      let toggleBtn = document.createElement("span");
+      toggleBtn.className = "dropdown-btn";
+      toggleBtn.textContent = "▶ ";
+      toggleBtn.style.marginRight = "8px";
+
+      let folderTitle = document.createElement("span");
+      folderTitle.textContent = `📁 ${folderName}`;
+
+      folderHeader.appendChild(toggleBtn);
+      folderHeader.appendChild(folderTitle);
+
+      // Sub-container where fetched children will be inserted
+      let subContainer = document.createElement("div");
+      subContainer.className = "sub-folder-container";
+      subContainer.style.display = "none"; 
+      subContainer.style.paddingLeft = "20px"; // Indentation for tree view
+
+      // Target path calculation
+      let targetPath = (data.currentFolder === '/' || data.currentFolder === '')
+        ? folderName
+        : `${data.currentFolder}/${folderName}`;
+
+      // Toggle event listener
+      folderHeader.addEventListener("click", async function (event) {
+        event.stopPropagation();
+
+        const isOpen = subContainer.style.display === "block";
+
+        if (isOpen) {
+          // CLOSE DROPDOWN
+          subContainer.style.display = "none";
+          subContainer.innerHTML = ""; // Clear child elements
+          toggleBtn.textContent = "▶ ";
+        } else {
+          // OPEN DROPDOWN & FETCH SUB-ITEMS
+          toggleBtn.textContent = "▼ ";
+          subContainer.style.display = "block";
+          subContainer.innerHTML = "<p style='font-size:12px; color:#888;'>Loading...</p>";
+
+          try {
+            const subData = await fetchClassroomResourcesData(classUuid, targetPath);
+            subContainer.innerHTML = ""; // Clear loading text
+
+            if (subData && subData.success) {
+              appendFolderContents(subContainer, subData);
+            } else {
+              subContainer.innerHTML = "<p style='font-size:12px; color:#888;'>Failed to load</p>";
+            }
+          } catch (err) {
+            console.error("Failed to load subfolder contents:", err);
+            subContainer.innerHTML = "<p style='font-size:12px; color:#888;'>Error loading folder</p>";
+          }
+        }
+      });
+
+      folderWrapper.appendChild(folderHeader);
+      folderWrapper.appendChild(subContainer);
+      parentContainer.appendChild(folderWrapper);
+    });
+  }
+
+  // 2. Render Files
+  if (data.files && data.files.length > 0) {
+    data.files.forEach(file => {
+      let fileEl = document.createElement("p");
+      fileEl.className = "res-name file-item";
+      fileEl.textContent = `📄 ${file.file_name}`;
+
+      fileEl.addEventListener("click", function(event) {
+        event.stopPropagation();
+        let ext = file.file_name.split('.').pop().toLowerCase();
+        let webDevExt = ['html', 'js', 'css', 'txt'];
+
+        if (webDevExt.includes(ext)) {
+            // Fetch file content directly from Uploadcare URL
+            fetch(file.file_url)
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to load file content");
+                    return response.text();
+                })
+                .then(content => {
+                    // 1. Render in the editor tab locally
+                    createNewTabMenuForResource(file.file_name, content);
+
+                    // 2. Broadcast to other students via Java WebSocket if needed
+                    socket.send(JSON.stringify({
+                        id: id,
+                        classUuid: classUuid,
+                        getFileContent: file.file_name,
+                        content: content
+                    }));
+                })
+                .catch(err => console.error("Error fetching file:", err));
+        } else {
+            window.open(file.file_url, '_blank');
+        }
+
+        let modal = document.querySelector(".modal-panel");
+        let resModal = document.querySelector(".res-modal");
+        if (modal && resModal && modal.contains(resModal)) {
+          modal.removeChild(resModal);
+        }
+      });
+
+      parentContainer.appendChild(fileEl);
+    });
+  }
+
+  // 3. Empty State
+  if ((!data.folders || !data.folders.length) && (!data.files || !data.files.length)) {
+    let emptyEl = document.createElement("p");
+    emptyEl.style.fontSize = "12px";
+    emptyEl.style.color = "#888";
+    emptyEl.textContent = "Empty folder";
+    parentContainer.appendChild(emptyEl);
+  }
+}
+
+/**
+ * Fetch helper returning promise payload instead of directly rendering root modal
+ */
+async function fetchClassroomResourcesData(classUuid, folder = '/') {
+  const response = await fetch(`/classroom/resources/${classUuid}?folder=${encodeURIComponent(folder)}`);
+  return await response.json();
+}
+
+/**
+ * Helper to initialize the root modal view
+ */
+async function fetchClassroomResources(classUuid, folder = '/') {
+  try {
+    const data = await fetchClassroomResourcesData(classUuid, folder);
+    if (data.success) {
+      showAllFileResources(data);
+    }
+  } catch (error) {
+    console.error("Error fetching folder contents:", error);
+  }
 }
 
 
@@ -586,65 +730,77 @@ function showAllFileResources(files) {
     }
   }
 
-      async function sendFile() {
+    async function sendFile() {
         console.log("uploading file");
+        let upBtn = document.getElementById("u-btn");
+        upBtn.textContent = "Uploading...";
         try {
           const fileInput = document.getElementById("fileInput");
           const file = fileInput.files[0];
-          
-          const reader = new FileReader();
-          reader.onload = async function(event) {
-            const fileData = event.target.result.split(',')[1]; // Extract Base64 data
-            
-            try {
-              // Send the Base64 data along with file type and name to the server
-              const response = await fetch(`${window.location.protocol}//${window.location.host}/upload`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  fileType: file.type,
-                  fileName: file.name,
-                  data: fileData
-                }),
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              });
-      
-              // Handle the response from the server as needed
-              if (response.ok) {
-                const responseData = await response.text();
-                console.log('File uploaded successfully with response', responseData);
-                const jRes = JSON.parse(responseData);
-                // Regular expression pattern to match image file types
-                var imageTypePattern = /^image\/.*/;
-      
-                switch (jRes.filetype) {
-                  case "image/png":
-                    showImage(jRes.file);
-                    break;
-                  default:
-                    // Check if the file type matches the image type pattern
-                    if (imageTypePattern.test(jRes.filetype)) {
-                      // If it's an image file, show it
-                      showImage(jRes.file);
-                    } else {
-                      // Handle other file types
-                      console.log("Unsupported file type: " + jRes.filetype);
-                    }
-                    break;
-                }
-              } else {
-                console.error('Failed to upload file:', response.statusText);
-              }
-            } catch (error) {
-              console.error('Error uploading file:', error);
+
+          if (!file) {
+            alert("Please select a file to upload.");
+            return;
+          }
+
+          // Build standard multi-part payload (No Base64 needed)
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("classUuid", classUuid);
+
+          // Send multi-part form data to Laravel controller
+          const response = await fetch('/classroom/resources/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
             }
-          };
-          
-          // Read the file as binary data
-          reader.readAsDataURL(file);
+          });
+
+          if (response.ok) {
+            const jRes = await response.json();
+            console.log('File uploaded successfully with response', jRes);
+            
+            upBtn.textContent = "Upload";
+
+            /**
+             * Expecting backend response format:
+             * {
+             *   success: true,
+             *   resource: {
+             *     fileName: "photo.png",
+             *     fileType: "image/png",
+             *     fileUrl: "https://ucarecdn.com/<uuid>/"
+             *   }
+             * }
+             */
+            const fileType = jRes.resource?.mime_type || file.type;
+            const fileUrl = jRes.resource?.file_url;
+
+            // Regular expression pattern to match image file types
+            var imageTypePattern = /^image\/.*/;
+
+            switch (fileType) {
+              case "image/png":
+                showImage(fileUrl);
+                break;
+              default:
+                // Check if the file type matches the image type pattern
+                if (imageTypePattern.test(fileType)) {
+                  // If it's an image file, show it
+                  showImage(fileUrl);
+                } else {
+                  // Handle other file types (e.g., PDF, TXT)
+                  console.log("Uploaded resource type: " + fileType);
+                }
+                break;
+            }
+          } else {
+            console.error('Failed to upload file:', response.statusText);
+          }
         } catch (error) {
-          console.error('Error reading file:', error);
+          upBtn.textContent = "Upload";
+          console.error('Error uploading file:', error);
         }
       }
       
@@ -670,6 +826,7 @@ function showAllFileResources(files) {
       const maxImg = document.createElement("img");
       maxImg.src = addr;
       maxImg.setAttribute("id", "maxImg");
+      maxImg.onclick = handleBackVideo;
       viewPort.appendChild(maxImg);
       socket.send(JSON.stringify({id: id, classUuid: classUuid, imgsrc: addr}));
   }
@@ -690,7 +847,7 @@ function showAllFileResources(files) {
         reader.readAsDataURL(file);
       });
     }
-    // document.getElementById("u-btn").addEventListener("click", sendFile);
+    document.getElementById("u-btn").addEventListener("click", sendFile);
   
       
   
@@ -740,6 +897,7 @@ function showAllFileResources(files) {
       videoHost.appendChild(rVideo);
   
       let remoteVideo = document.getElementById("reVideo");
+      remoteVideo.style.display = "none";
       
       let localStream;
       
@@ -1179,7 +1337,7 @@ function showAllFileResources(files) {
                       throw new Error("Failed to end class");
                   }
 
-                  window.location.href = "/classroom";
+                  window.location.href = "/lecturer/dashboard";
 
               } catch (error) {
                   console.error(error);
@@ -1267,7 +1425,8 @@ function showAllFileResources(files) {
       //add an event listener for this button 
       button2.addEventListener("click", function(){
         //get all the files in the home directory
-        socket.send(JSON.stringify({id: id, classUuid: classUuid, getAllFileResource: "getAll"}));
+        // socket.send(JSON.stringify({id: id, classUuid: classUuid, getAllFileResource: "getAll"}));
+        fetchClassroomResources(classUuid, '/');
       });
   
       editItem3.appendChild(button2);
@@ -1682,25 +1841,88 @@ function showAllFileResources(files) {
       // updateLineNumbers();
   }
 
-  function saveTheFile() {
-      const filename = document.getElementById('filename').value;
-      if (!filename) {
-          alert('Please enter a filename.');
-          return;
-      }
+  async function saveTheFile() {
+    const filenameInput = document.getElementById('filename').value.trim();
+    if (!filenameInput) {
+      alert('Please enter a filename.');
+      return;
+    }
 
-      // Get the editor content and remove the span tags
-      const editorContent = editor.innerHTML;
-      const cleanContent = editorContent.replace(/<span class="tag">(.*?)<\/span>/g, '$1');
-      const cleanContentLd = cleanContent.replace(/&lt;/g, '<');
-      const cleanContentGd = cleanContentLd.replace(/&gt;/g, '>');
-      console.log("The title is", filename);
-      console.log("This is the editor content", editorContent);
-      console.log("The content is",cleanContent);
-      console.log("The final content is ", cleanContentGd);
-      socket.send(JSON.stringify({id: id, classUuid: classUuid, saveFileData: cleanContentGd, fileName: filename}));
+    
+    var saveFile = document.getElementById("saveEditFile");
+    saveFile.textContent = "Saving...";
+    // 1. Sanitize editor content
+    const editorContent = editor.innerHTML;
+    const cleanContent = editorContent.replace(/<span class="tag">(.*?)<\/span>/g, '$1');
+    const cleanContentLd = cleanContent.replace(/&lt;/g, '<');
+    const cleanContentGd = cleanContentLd.replace(/&gt;/g, '>');
 
+    // 2. Extract folder path if present in filename (e.g. "programming/index.html")
+    let folderPath = '/';
+    let filename = filenameInput;
+
+    if (filenameInput.includes('/')) {
+      const parts = filenameInput.split('/');
+      filename = parts.pop(); // Actual file name (e.g., "index.html")
+      folderPath = parts.join('/'); // Path (e.g., "programming")
+    }
+
+    // 3. Infer MIME type (defaults to text/plain or text/html)
+    const ext = filename.split('.').pop().toLowerCase();
+    const mimeMap = {
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'text/javascript',
+      'txt': 'text/plain'
+    };
+    const mimeType = mimeMap[ext] || 'text/plain';
+
+    // 4. Convert string content into an in-memory File object
+    const fileBlob = new Blob([cleanContentGd], { type: mimeType });
+    const file = new File([fileBlob], filename, { type: mimeType });
+
+    // 5. Append data to FormData
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('classUuid', classUuid);
+    formData.append('folderPath', folderPath);
+
+    try {
+      const response = await fetch('/classroom/resources/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('File saved and uploaded successfully:', data.resource);
+        
+        saveFile.textContent = "Save The File";
+
+        // Notify connected peers via WebSocket that a file was updated/saved
+        socket.send(JSON.stringify({
+          id: id,
+          classUuid: classUuid,
+          fileSaved: true,
+          fileName: filename,
+          folderPath: folderPath
+        }));
+
+        alert('File saved successfully!');
+      } else {
+        alert('Failed to save file: ' + (data.error || 'Server error'));
       }
+    } catch (error) {
+      
+      saveFile.textContent = "Save The File";
+      console.error('Error saving file:', error);
+      alert('An error occurred while saving the file.');
+    }
+  }
 
   }
     
@@ -1809,6 +2031,7 @@ function showAllFileResources(files) {
               console.log("Found rtcPeer for user " + userName + ": " + rtcPeer);
   
               //add the stream to lecturer stream and set the label
+              remoteVideo.style.display = "block";
               
               remoteVideo.srcObject = jsonObject.stream;
               remoteVideo.setAttribute("preload", "auto");
@@ -1838,6 +2061,7 @@ function showAllFileResources(files) {
                     box.appendChild(closeButton);
                     closeButton.onclick = async () => {
                       remoteVideo.srcObject = null;
+                      remoteVideo.style.display = "none";
                       box.removeChild(closeButton);
                       socket.send(JSON.stringify({id: id, classUuid: classUuid, closeStream: "closeStream"}));
                     }

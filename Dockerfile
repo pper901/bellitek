@@ -1,9 +1,9 @@
 FROM php:8.3-apache
 
-# --- SYSTEM & PHP EXTENSIONS ---
+# --- SYSTEM & PHP EXTENSIONS + JAVA ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip libpng-dev libonig-dev libxml2-dev libpq-dev zip curl \
-    nodejs npm \
+    nodejs npm default-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y libicu-dev \
@@ -20,13 +20,17 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 WORKDIR /var/www/app
 COPY . .
 
+# Copy generalclass JAR into the specified location
+COPY generalclass/generalclass-server-1.0-SNAPSHOT.jar /var/www/app/generalclass/app.jar
+
 # Permissions
 RUN chown -R www-data:www-data /var/www/app \
     && chmod -R 775 /var/www/app/storage /var/www/app/bootstrap/cache
 
 # Composer
+ENV COMPOSER_MEMORY_LIMIT=-1
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # --- VITE ASSETS ---
 RUN npm install
@@ -55,6 +59,8 @@ RUN echo '<VirtualHost *:80>\n\
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 80
+# Expose HTTP (80) & GeneralClass Java WebSocket/HTTP (8090)
+EXPOSE 80 8090
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["apache2-foreground"]

@@ -37,7 +37,7 @@
                 <div id="upload-data"></div>
                 <div class="u-item-hide">
                   <label for="fileInput">Choose a file:</label>
-                  <input type="file" id="fileInput">
+                  <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.html,.js,.css" />
                   <button class="rs-btn" id="u-btn">Upload</button>
                 </div>
                 <div class="u-item-hide">

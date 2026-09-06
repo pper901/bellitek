@@ -7,7 +7,7 @@ use App\Services\ErrorTelemetryService;
 
 //C:\\Users\\USER\\Documents\\Bellifix\\bellifix
 ///var/www/app
-return Application::configure(basePath: 'C:\\Users\\USER\\Documents\\Bellifix\\bellifix')
+return Application::configure(basePath: '/var/www/app')
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
