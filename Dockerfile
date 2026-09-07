@@ -51,7 +51,7 @@ RUN printf '%s\n' \
     '    DocumentRoot /var/www/html' \
     '' \
     '    <Directory /var/www/html>' \
-    '        Options FollowSymLinks -Indexes' \
+    '        Options +FollowSymLinks -Indexes' \
     '        AllowOverride All' \
     '        Require all granted' \
     '    </Directory>' \
