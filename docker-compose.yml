@@ -25,12 +25,12 @@ services:
       PORT: "8090"
 
       # Database
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: bellitek
-      DB_USERNAME: bellitek_user
-      DB_PASSWORD: strongpassword1
+      # DB_CONNECTION: pgsql
+      # DB_HOST: db
+      # DB_PORT: 5432
+      # DB_DATABASE: bellitek
+      # DB_USERNAME: bellitek_user
+      # DB_PASSWORD: strongpassword1
 
       LOG_CHANNEL: stack
       LOG_STACK: single
