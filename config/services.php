@@ -53,7 +53,7 @@ return [
     'generalclass' => [
         'url' => env('GENERALCLASS_URL'),
         'websocket_url' => env('GENERALCLASS_WEBSOCKET_URL'),
-        'internal_api_key' => 'aErH8eYPLwxtRcRA9bEabHxiJJwjzri1aLy17IjNtX3kbP3PK6nVjpNHC3vk8pip',
+        'internal_api_key' => env('INTERNAL_SERVICE_TOKEN'),
         'java_container' => env('GENERALCLASS_JAVA_CONTAINER', 'generalclass-server'),
         'laravel_container' => env('BELLITEK_LARAVEL_CONTAINER', 'bellitek-app'),
     ],
