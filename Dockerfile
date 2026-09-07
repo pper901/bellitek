@@ -45,14 +45,26 @@ RUN echo 'Options +FollowSymLinks\nRewriteEngine On\n\nRewriteCond %{REQUEST_FIL
     > /var/www/app/public/.htaccess
 
 # VirtualHost
-RUN echo '<VirtualHost *:80>\n\
-    DocumentRoot /var/www/html\n\
-    <Directory /var/www/html>\n\
-        AllowOverride All\n\
-        Require all granted\n\
-    </Directory>\n\
-</VirtualHost>' \
+RUN printf '%s\n' \
+    '<VirtualHost *:80>' \
+    '    ServerName localhost' \
+    '    DocumentRoot /var/www/html' \
+    '' \
+    '    <Directory /var/www/html>' \
+    '        Options FollowSymLinks -Indexes' \
+    '        AllowOverride All' \
+    '        Require all granted' \
+    '    </Directory>' \
+    '' \
+    '    SetEnvIf Authorization "^(.*)$" HTTP_AUTHORIZATION=$1' \
+    '' \
+    '    DirectoryIndex index.php' \
+    '' \
+    '    ErrorLog ${APACHE_LOG_DIR}/error.log' \
+    '    CustomLog ${APACHE_LOG_DIR}/access.log combined' \
+    '</VirtualHost>' \
     > /etc/apache2/sites-available/laravel.conf \
+    && a2dissite 000-default.conf \
     && a2ensite laravel.conf
 
 # Entrypoint
