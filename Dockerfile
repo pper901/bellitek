@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y libicu-dev \
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd pdo pdo_pgsql
 
 # Apache config
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # --- LARAVEL APP ---
