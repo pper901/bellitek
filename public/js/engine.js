@@ -77,7 +77,7 @@ console.log("data value is ",data);
 
   if(prot == "https:"){
     console.log("using secure sever");
-    socket = new WebSocket("wss://"+host+":8443/ws");
+    socket = new WebSocket("wss://"+host+"/ws");
   }else{
     console.log("using less secure sever");
     socket = new WebSocket("ws://"+host+":8090/ws");
