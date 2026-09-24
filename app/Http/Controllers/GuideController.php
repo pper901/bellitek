@@ -53,62 +53,232 @@ class GuideController extends Controller
 
         return redirect()->route('admin.guides.index');
     }
+
     public function jsonstore(Request $request)
     {
-        // 1. Validate that 'json_data' is present and is valid JSON string
+        // 1. Validate that JSON data was provided
         $request->validate([
             'json_data' => ['required', 'json'],
         ]);
 
-        // 2. Decode the JSON string into an associative array
-        $data = json_decode($request->input('json_data'), true);
+        // 2. Decode JSON
+        $data = json_decode(
+            $request->input('json_data'),
+            true
+        );
 
-        // 3. Validate decoded payload structure
+        if (!is_array($data)) {
+            return back()
+                ->withErrors([
+                    'json_data' => 'The JSON must contain a valid guide object or array of guides.'
+                ])
+                ->withInput();
+        }
+
+        // 3. Allow both:
+        //
+        // Single guide:
+        // {
+        //     "device": "Phone",
+        //     ...
+        // }
+        //
+        // Multiple guides:
+        // [
+        //     {...},
+        //     {...}
+        // ]
+        //
+        if (isset($data['device'])) {
+            $data = [$data];
+        }
+
+        // 4. Validate every guide
         $validator = \Illuminate\Support\Facades\Validator::make($data, [
-            'device'      => 'required|string|max:255',
-            'category'    => 'required|string|max:255',
-            'brand'       => 'required|string|max:255',
-            'series'      => 'nullable|string|max:255',
-            'model'       => 'required|string|max:255',
-            'issue'       => 'required|string|max:255',
-            'youtube_url' => 'nullable|url',
-            'resources'   => 'nullable|array',
-            'resources.*.cause'    => 'nullable|string',
-            'resources.*.solution' => 'nullable|string',
-            'resources.*.details'  => 'nullable|string',
+
+            '*.device' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            '*.category' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            '*.brand' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            '*.series' => [
+                'nullable',
+                'string',
+                'max:255'
+            ],
+
+            '*.model' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            '*.issue' => [
+                'required',
+                'string',
+                'max:255'
+            ],
+
+            '*.youtube_video' => [
+                'nullable',
+                'url'
+            ],
+
+            '*.causes' => [
+                'nullable',
+                'array'
+            ],
+
+            '*.causes.*.cause' => [
+                'nullable',
+                'string'
+            ],
+
+            '*.causes.*.solution' => [
+                'nullable',
+                'string'
+            ],
+
+            '*.causes.*.detailed_steps' => [
+                'nullable',
+                'string'
+            ],
         ]);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
+            return back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
-        // 4. Save to Database inside a Transaction
-        DB::transaction(function () use ($data) {
-            // Create the main Guide
-            $guideData = [
-                'device'      => $data['device'],
-                'category'    => $data['category'],
-                'brand'       => $data['brand'],
-                'series'      => $data['series'] ?? null,
-                'model'       => $data['model'],
-                'issue'       => $data['issue'],
-                'youtube_url' => $data['youtube_url'] ?? null,
-                'issue_slug'  => Str::slug($data['issue']),
-            ];
+        // 5. Counters
+        $imported = 0;
+        $skipped = 0;
 
-            $guide = Guide::create($guideData);
+        // 6. Import everything inside one transaction
+        DB::transaction(function () use (
+            $data,
+            &$imported,
+            &$skipped
+        ) {
 
-            // Create nested Resources if available
-            if (!empty($data['resources']) && is_array($data['resources'])) {
-                $resourceFillables = ['cause', 'solution', 'details'];
-                foreach ($data['resources'] as $res) {
-                    $resourceData = array_intersect_key($res, array_flip($resourceFillables));
-                    $guide->resources()->create($resourceData);
+            foreach ($data as $guideData) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | Check for duplicate
+                |--------------------------------------------------------------------------
+                |
+                | A guide is considered a duplicate when the same:
+                |
+                | device + category + brand + series + model + issue
+                |
+                */
+
+                $duplicate = Guide::where('device', $guideData['device'])
+                    ->where('category', $guideData['category'])
+                    ->where('brand', $guideData['brand'])
+                    ->where('model', $guideData['model'])
+                    ->where('issue', $guideData['issue']);
+
+                // Handle nullable series correctly
+                if (
+                    isset($guideData['series']) &&
+                    $guideData['series'] !== null
+                ) {
+                    $duplicate->where(
+                        'series',
+                        $guideData['series']
+                    );
+                } else {
+                    $duplicate->whereNull('series');
                 }
+
+                if ($duplicate->exists()) {
+
+                    $skipped++;
+
+                    continue;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create Guide
+                |--------------------------------------------------------------------------
+                */
+
+                $guide = Guide::create([
+                    'device' => $guideData['device'],
+
+                    'category' => $guideData['category'],
+
+                    'brand' => $guideData['brand'],
+
+                    'series' => $guideData['series'] ?? null,
+
+                    'model' => $guideData['model'],
+
+                    'issue' => $guideData['issue'],
+
+                    'youtube_url' =>
+                        $guideData['youtube_video'] ?? null,
+
+                    'issue_slug' =>
+                        Str::slug(
+                            $guideData['issue']
+                        ),
+                ]);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create Causes / Solutions
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    !empty($guideData['causes']) &&
+                    is_array($guideData['causes'])
+                ) {
+
+                    foreach ($guideData['causes'] as $cause) {
+
+                        $guide->resources()->create([
+                            'cause' =>
+                                $cause['cause'] ?? null,
+
+                            'solution' =>
+                                $cause['solution'] ?? null,
+
+                            'details' =>
+                                $cause['detailed_steps'] ?? null,
+                        ]);
+                    }
+                }
+
+                $imported++;
             }
         });
 
-        return redirect()->route('admin.guides.index')->with('success', 'Guide created successfully via JSON!');
+        // 7. Return import summary
+        return redirect()
+            ->route('admin.guides.index')
+            ->with(
+                'success',
+                "Import completed. {$imported} guide(s) imported and {$skipped} duplicate(s) skipped."
+            );
     }
 
     public function edit(Guide $guide)
