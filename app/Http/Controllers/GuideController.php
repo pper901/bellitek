@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Guide;
 use Illuminate\Support\Str;
 use App\Models\GuideResource; 
+use Illuminate\Support\Facades\DB;
 
 class GuideController extends Controller
 {
