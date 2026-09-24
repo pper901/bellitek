@@ -185,6 +185,7 @@ use Illuminate\Support\Facades\Route;
             Route::get('/', [GuideController::class, 'index'])->name('index');
             Route::get('/create', [GuideController::class, 'create'])->name('create');
             Route::post('/store', [GuideController::class, 'store'])->name('store');
+            Route::post('/jsonstore', [GuideController::class, 'jsonstore'])->name('jsonstore');
 
             Route::get('/{guide}/edit', [GuideController::class, 'edit'])->name('edit');
             Route::put('/{guide}', [GuideController::class, 'update'])->name('update');
