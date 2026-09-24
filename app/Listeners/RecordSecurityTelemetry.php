@@ -31,13 +31,11 @@ class RecordSecurityTelemetry
     public function handleFailed(Failed $event): void
     {
         $this->securityTelemetry->record(
-            'login_failed',
-            null,
-            'Invalid credentials',
-            [
-                'identifier' =>
-                    $event->credentials['email']
-                    ?? null,
+            event: 'login_failed',
+            userId: $event->user?->id,
+            reason: 'Invalid credentials',
+            context: [
+                'identifier' => $event->credentials['email'] ?? null,
             ]
         );
     }
