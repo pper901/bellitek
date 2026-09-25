@@ -56,10 +56,28 @@
         <!-- YOUTUBE URL FIELD -->
         <div class="col-span-1 md:col-span-2">
             <label class="block text-sm font-medium text-gray-700">YouTube Video (optional)</label>
-            <input name="youtube_url" class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+            <input type="url" id="youtube_url" name="youtube_url"
+                class="input mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                 placeholder="https://www.youtube.com/watch?v=xxxx"
                 value="{{ old('youtube_url', $guide->youtube_url) }}">
-            <p class="text-xs text-gray-500 mt-1">Paste a normal YouTube link. It will be embedded automatically.</p>
+            @error('youtube_url')
+                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+            @enderror
+            <p id="youtube_status" class="text-xs mt-1"></p>
+
+            <!-- Live preview -->
+            <div id="youtube_preview_wrapper" class="mt-3 hidden">
+                <div class="aspect-video w-full max-w-md rounded-lg overflow-hidden border border-gray-200 bg-black">
+                    <iframe id="youtube_preview" class="w-full h-full" src=""
+                        title="YouTube preview" frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+                </div>
+                <button type="button" id="youtube_clear"
+                    class="text-xs text-red-600 hover:text-red-800 mt-1 font-medium">
+                    Remove video
+                </button>
+            </div>
         </div>
     </div>
 
@@ -181,6 +199,63 @@ wrapper.addEventListener('click', (e) => {
         }
     }
 });
+
+// --- YouTube URL handling ---
+const ytInput = document.getElementById('youtube_url');
+const ytStatus = document.getElementById('youtube_status');
+const ytPreviewWrapper = document.getElementById('youtube_preview_wrapper');
+const ytPreviewFrame = document.getElementById('youtube_preview');
+const ytClearBtn = document.getElementById('youtube_clear');
+
+// Extracts an 11-char YouTube video ID from watch, youtu.be, embed, or shorts URLs
+function extractYouTubeId(url) {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=)([\w-]{11})/,
+        /(?:youtu\.be\/)([\w-]{11})/,
+        /(?:youtube\.com\/embed\/)([\w-]{11})/,
+        /(?:youtube\.com\/shorts\/)([\w-]{11})/
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    return null;
+}
+
+function updateYouTubePreview() {
+    const url = ytInput.value.trim();
+
+    if (!url) {
+        ytStatus.textContent = '';
+        ytPreviewWrapper.classList.add('hidden');
+        return;
+    }
+
+    const videoId = extractYouTubeId(url);
+
+    if (videoId) {
+        ytStatus.textContent = 'Valid YouTube link detected.';
+        ytStatus.className = 'text-xs mt-1 text-green-600';
+        ytPreviewFrame.src = `https://www.youtube.com/embed/${videoId}`;
+        ytPreviewWrapper.classList.remove('hidden');
+    } else {
+        ytStatus.textContent = "Doesn't look like a valid YouTube link.";
+        ytStatus.className = 'text-xs mt-1 text-red-600';
+        ytPreviewFrame.src = '';
+        ytPreviewWrapper.classList.add('hidden');
+    }
+}
+
+ytInput.addEventListener('input', updateYouTubePreview);
+
+ytClearBtn.addEventListener('click', () => {
+    ytInput.value = '';
+    updateYouTubePreview();
+});
+
+// Show preview immediately on page load if a URL already exists
+document.addEventListener('DOMContentLoaded', updateYouTubePreview);
 </script>
 
 @endsection
