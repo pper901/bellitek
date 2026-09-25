@@ -287,41 +287,52 @@ class GuideController extends Controller
         return view('admin.guides.edit', compact('guide'));
     }
 
+
     public function update(Request $request, Guide $guide)
     {
         $request->validate([
-            'device' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'series' => 'nullable|string|max:255',
-            'model' => 'required|string|max:255',
-            'issue' => 'required|string|max:255',
-            'youtube_url' => 'nullable|url', // <-- NEW
+            'device'      => 'required|string|max:255',
+            'category'    => 'required|string|max:255',
+            'brand'       => 'required|string|max:255',
+            'series'      => 'nullable|string|max:255',
+            'model'       => 'required|string|max:255',
+            'issue'       => 'required|string|max:255',
+            'youtube_url' => 'nullable|url',
         ]);
 
-        $guide->update([
-            'device'     => $request->device,
-            'category'   => $request->category,
-            'brand'      => $request->brand,
-            'series'     => $request->series,
-            'model'      => $request->model,
-            'issue'      => $request->issue,
-            'youtube_url'=> $request->youtube_url, // <-- NEW
-            'issue_slug' => Str::slug($request->issue),
-        ]);
+        DB::transaction(function () use ($request, $guide) {
+            // 1. Update main guide details
+            $guide->update([
+                'device'      => $request->device,
+                'category'    => $request->category,
+                'brand'       => $request->brand,
+                'series'      => $request->series,
+                'model'       => $request->model,
+                'issue'       => $request->issue,
+                'youtube_url' => $request->youtube_url,
+                'issue_slug'  => Str::slug($request->issue),
+            ]);
 
-        // Delete old resources and recreate
-        $guide->resources()->delete();
+            // 2. Clear old resources
+            $guide->resources()->delete();
 
-        if ($request->has('resources') && is_array($request->resources)) {
-            $resourceFillables = ['cause', 'solution', 'details'];
-            foreach ($request->resources as $res) {
-                $resourceData = array_intersect_key($res, array_flip($resourceFillables));
-                $guide->resources()->create($resourceData);
+            // 3. Re-create non-empty resources
+            if ($request->has('resources') && is_array($request->resources)) {
+                $resourceFillables = ['cause', 'solution', 'details'];
+
+                foreach ($request->resources as $res) {
+                    // Extract relevant fields
+                    $resourceData = array_intersect_key($res, array_flip($resourceFillables));
+
+                    // Only save if at least one field contains content
+                    if (array_filter($resourceData)) {
+                        $guide->resources()->create($resourceData);
+                    }
+                }
             }
-        }
+        });
 
-        return redirect()->route('admin.guides.index');
+        return redirect()->route('admin.guides.index')->with('success', 'Guide updated successfully!');
     }
 
 
